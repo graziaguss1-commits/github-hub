@@ -104,6 +104,11 @@ function PacienteDetalhe() {
                 <span className="text-sm text-muted-foreground">
                   Médico(a): {perfis.find((p) => p.id === plano.medico_id)?.nome ?? "—"}
                 </span>
+                <Button size="sm" variant="outline" asChild>
+                  <a href={`/imprimir-plano/${plano.id}`} target="_blank" rel="noreferrer">
+                    Imprimir plano
+                  </a>
+                </Button>
                 {podePlano && <StatusPlano plano={plano} />}
               </>
             )}

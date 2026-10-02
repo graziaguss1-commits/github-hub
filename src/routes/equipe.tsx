@@ -39,13 +39,16 @@ function Equipe() {
   return (
     <AppShell titulo="Equipe">
       <p className="mb-4 text-sm text-muted-foreground">
-        Quem cria acesso entra bloqueado. O admin libera e define o papel de cada pessoa.
+        Quem cria acesso entra bloqueado. O admin libera, define o papel e preenche CRM/COREN e especialidade
+        (saem no orçamento e no plano impressos). Para cadastrar um médico, ele cria o próprio acesso na tela de login.
       </p>
       <div className="mb-8 rounded-lg border">
         <Table>
           <TableHeader>
             <TableRow>
               <TableHead>Nome</TableHead>
+              <TableHead>CRM / COREN</TableHead>
+              <TableHead>Especialidade</TableHead>
               <TableHead>E-mail</TableHead>
               <TableHead>Papel</TableHead>
               <TableHead>Acesso</TableHead>
@@ -54,8 +57,35 @@ function Equipe() {
           <TableBody>
             {perfis.map((p) => (
               <TableRow key={p.id}>
-                <TableCell className="font-medium">{p.nome}</TableCell>
-                <TableCell>{p.email}</TableCell>
+                <TableCell className="font-medium">
+                  {admin ? (
+                    <CampoTexto valor={p.nome} salvar={(v) => atualizar.mutate({ id: p.id, nome: v ?? "" })} />
+                  ) : (
+                    p.nome
+                  )}
+                </TableCell>
+                <TableCell>
+                  {admin ? (
+                    <CampoTexto
+                      valor={p.registro_profissional}
+                      placeholder="CRM-SP 000000"
+                      salvar={(v) => atualizar.mutate({ id: p.id, registro_profissional: v })}
+                    />
+                  ) : (
+                    (p.registro_profissional ?? "—")
+                  )}
+                </TableCell>
+                <TableCell>
+                  {admin ? (
+                    <CampoTexto
+                      valor={p.especialidade}
+                      salvar={(v) => atualizar.mutate({ id: p.id, especialidade: v })}
+                    />
+                  ) : (
+                    (p.especialidade ?? "—")
+                  )}
+                </TableCell>
+                <TableCell className="text-sm text-muted-foreground">{p.email}</TableCell>
                 <TableCell>
                   {admin && p.id !== eu?.id ? (
                     <Seletor
@@ -99,6 +129,29 @@ function Equipe() {
         </div>
       )}
     </AppShell>
+  );
+}
+
+/** Campo que salva ao sair (ou com Enter), só se mudou. */
+function CampoTexto({
+  valor,
+  salvar,
+  placeholder,
+}: {
+  valor: string | null;
+  salvar: (v: string | null) => void;
+  placeholder?: string;
+}) {
+  const [texto, setTexto] = useState(valor ?? "");
+  return (
+    <Input
+      className="h-8 min-w-36"
+      value={texto}
+      placeholder={placeholder}
+      onChange={(e) => setTexto(e.target.value)}
+      onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
+      onBlur={() => texto.trim() !== (valor ?? "") && salvar(texto.trim() || null)}
+    />
   );
 }
 

@@ -1,11 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
+import { addDays, format, parseISO } from "date-fns";
 import { Printer } from "lucide-react";
 
 import { descreverQuantidade, useOrcamento } from "@/components/orcamento/dados";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/auth";
 import { brl, data } from "@/lib/format";
+import { usePerfis } from "@/lib/queries";
 import { check, supabase } from "@/lib/supabase";
 
 export const Route = createFileRoute("/imprimir-orcamento/$id")({
@@ -19,6 +21,7 @@ function Imprimir() {
   const { id } = Route.useParams();
   const { carregando, session } = useAuth();
   const { data: dados, isLoading } = useOrcamento(id);
+  const { data: perfis = [] } = usePerfis();
   const { data: clinica } = useQuery({
     queryKey: ["dados_clinica"],
     enabled: Boolean(session),
@@ -29,6 +32,9 @@ function Imprimir() {
   if (!session || !dados) return <p className="p-10 text-sm">Entre no sistema para ver este orçamento.</p>;
 
   const { quote, paciente, itens, descontos, total } = dados;
+  const medico = perfis.find((p) => p.id === quote.medico_id);
+  const emissao = quote.created_at.slice(0, 10);
+  const validade = format(addDays(parseISO(emissao), 7), "yyyy-MM-dd");
 
   return (
     <div className="min-h-screen bg-muted/40 py-8 print:bg-white print:py-0">
@@ -50,10 +56,19 @@ function Imprimir() {
           </div>
         </header>
 
-        <p className="mb-6">
-          <span className="text-neutral-500">Paciente: </span>
-          <strong>{paciente.nome}</strong>
-        </p>
+        <div className="mb-6 grid gap-1">
+          <p>
+            <span className="text-neutral-500">Paciente: </span>
+            <strong>{paciente.nome}</strong>
+          </p>
+          {medico && (
+            <p>
+              <span className="text-neutral-500">Médico(a) responsável: </span>
+              {medico.nome}
+              {medico.registro_profissional && ` · ${medico.registro_profissional}`}
+            </p>
+          )}
+        </div>
 
         <table className="mb-6 w-full border-collapse">
           <thead>
@@ -95,6 +110,10 @@ function Imprimir() {
             <span>{brl(total.total)}</span>
           </div>
         </div>
+
+        <p className="mt-6 text-neutral-600">
+          Orçamento válido por 7 dias, até {data(validade)}.
+        </p>
 
         {quote.observacoes && (
           <section className="mt-8">

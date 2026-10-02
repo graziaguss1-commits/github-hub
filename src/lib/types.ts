@@ -8,6 +8,8 @@ export type Profile = {
   email: string | null;
   papel: Papel;
   ativo: boolean;
+  registro_profissional: string | null;
+  especialidade: string | null;
 };
 
 export type Product = {

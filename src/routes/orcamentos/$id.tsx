@@ -105,8 +105,13 @@ function PrescricaoDoOrcamento({ planId }: { planId: string }) {
     <section id="prescricao" className="mt-10 border-t pt-6">
       <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2">
         <h2 className="text-lg font-semibold">Prescrição por semana</h2>
-        <span className="text-sm text-muted-foreground">
+        <span className="flex items-center gap-3 text-sm text-muted-foreground">
           Semana 1 começa em {data(plano.inicio)} · a aplicação é registrada na página do paciente
+          <Button size="sm" variant="outline" asChild>
+            <a href={`/imprimir-plano/${plano.id}`} target="_blank" rel="noreferrer">
+              <Printer /> Imprimir plano
+            </a>
+          </Button>
         </span>
       </div>
       <Prescricao key={`${plano.id}:${versao}`} plano={plano} dados={dados} />
