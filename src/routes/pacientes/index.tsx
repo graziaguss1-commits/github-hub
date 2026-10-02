@@ -23,8 +23,8 @@ export const Route = createFileRoute("/pacientes/")({
 type Aba = "todos" | "em_tratamento" | "aniversariantes";
 
 const SITUACAO: Record<PacienteLista["situacao"], { texto: string; cls: string }> = {
-  em_tratamento: { texto: "Em tratamento", cls: "bg-sky-100 text-sky-800 dark:bg-sky-950 dark:text-sky-300" },
-  concluido: { texto: "Tratamento concluído", cls: "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300" },
+  em_tratamento: { texto: "Em tratamento", cls: "bg-[var(--info)]/10 text-[var(--info)]" },
+  concluido: { texto: "Tratamento concluído", cls: "bg-[var(--atencao)]/10 text-[var(--atencao)]" },
   sem_plano: { texto: "—", cls: "bg-muted text-muted-foreground" },
 };
 
@@ -116,10 +116,10 @@ function Pacientes() {
       {isLoading ? null : lista.length === 0 ? (
         <Vazio>Nenhum paciente encontrado.</Vazio>
       ) : (
-        <div className="overflow-x-auto rounded-2xl border bg-card shadow-sm">
+        <div className="cartao overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b text-left font-mono text-xs uppercase tracking-widest text-muted-foreground">
+              <tr className="eyebrow border-b text-left">
                 <th className="px-5 py-4 font-normal">Código</th>
                 <th className="px-5 py-4 font-normal">Paciente</th>
                 <th className="px-5 py-4 font-normal">Telefone</th>

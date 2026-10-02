@@ -16,7 +16,7 @@ export function Seletor({ className, children, ...props }: SelectHTMLAttributes<
   return (
     <select
       className={cn(
-        "h-9 w-full rounded-md border border-input bg-background px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-50",
+        "h-10 w-full rounded-[12px] border border-input bg-card px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:bg-muted disabled:opacity-70",
         className,
       )}
       {...props}
@@ -28,7 +28,7 @@ export function Seletor({ className, children, ...props }: SelectHTMLAttributes<
 
 export function Vazio({ children }: { children: ReactNode }) {
   return (
-    <div className="rounded-lg border border-dashed px-6 py-10 text-center text-sm text-muted-foreground">
+    <div className="rounded-[22px] border border-dashed bg-card px-6 py-10 text-center text-sm text-muted-foreground">
       {children}
     </div>
   );
@@ -43,13 +43,13 @@ export function Etiqueta({
 }) {
   const cores = {
     neutro: "bg-muted text-muted-foreground",
-    ok: "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300",
-    alerta: "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300",
-    perigo: "bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300",
-    info: "bg-sky-100 text-sky-800 dark:bg-sky-950 dark:text-sky-300",
+    ok: "bg-[var(--sucesso)]/10 text-[var(--sucesso)]",
+    alerta: "bg-[var(--atencao)]/10 text-[var(--atencao)]",
+    perigo: "bg-[var(--erro)]/10 text-[var(--erro)]",
+    info: "bg-[var(--info)]/10 text-[var(--info)]",
   } as const;
   return (
-    <span className={cn("inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium", cores[tom])}>
+    <span className={cn("inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold", cores[tom])}>
       {children}
     </span>
   );

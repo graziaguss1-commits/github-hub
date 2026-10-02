@@ -85,7 +85,7 @@ function Inicio() {
           {abaixo.length === 0 ? (
             <Vazio>Tudo acima do mínimo.</Vazio>
           ) : (
-            <ul className="divide-y rounded-lg border">
+            <ul className="cartao divide-y overflow-hidden">
               {abaixo.map((e) => (
                 <li key={e.product_id} className="flex justify-between px-4 py-2 text-sm">
                   <span>{e.nome}</span>
@@ -102,7 +102,7 @@ function Inicio() {
           {vencendo.length === 0 ? (
             <Vazio>Nenhum lote perto do vencimento.</Vazio>
           ) : (
-            <ul className="divide-y rounded-lg border">
+            <ul className="cartao divide-y overflow-hidden">
               {vencendo.map((l) => {
                 const p = produtos.find((x) => x.id === l.product_id);
                 const d = diasAte(l.validade) ?? 0;
@@ -139,7 +139,7 @@ function Bloco({ icone, titulo, children }: { icone: ReactNode; titulo: string; 
 
 function ListaPendentes({ itens, atrasada }: { itens: Pendente[]; atrasada?: boolean }) {
   return (
-    <ul className="divide-y rounded-lg border">
+    <ul className="cartao divide-y overflow-hidden">
       {itens.map((p) => (
         <li
           key={`${p.plano.id}-${p.semana}-${p.sub}`}

@@ -86,14 +86,14 @@ export function Execucao({ plano, dados }: { plano: Plan; dados: DadosPlano }) {
         const dividida = subs.length > 1;
 
         return (
-          <div key={semana} className="rounded-xl border bg-card px-4 py-3 text-sm shadow-sm">
+          <div key={semana} className="cartao px-5 py-4">
             <div className="flex gap-3">
               <div
                 className={`flex size-7 shrink-0 items-center justify-center rounded-full text-xs font-medium ${
                   tudoFeito
-                    ? "bg-emerald-700 text-white"
+                    ? "bg-[var(--sucesso)] text-white"
                     : algumAtraso
-                      ? "bg-red-100 text-red-700"
+                      ? "bg-[var(--erro)]/10 text-[var(--erro)]"
                       : "bg-muted text-muted-foreground"
                 }`}
               >
@@ -107,7 +107,7 @@ export function Execucao({ plano, dados }: { plano: Plan; dados: DadosPlano }) {
                     {dataCurta(ini)} a {dataCurta(addDays(ini, 6))}
                   </span>
                   {dividida && (
-                    <span className="rounded-full border border-sky-300 px-2 py-0.5 text-xs font-medium text-sky-700">
+                    <span className="rounded-full bg-[var(--info)]/10 px-2.5 py-0.5 text-xs font-semibold text-[var(--info)]">
                       Dividida em {subs.length} aplicações
                     </span>
                   )}
@@ -162,7 +162,7 @@ export function Execucao({ plano, dados }: { plano: Plan; dados: DadosPlano }) {
                                 );
                               })}
                           {sit === "realizada" && s.app && (
-                            <p className="text-xs text-emerald-700">
+                            <p className="text-xs text-[var(--sucesso)]">
                               Aplicada em {data(s.app.data_aplicacao)} · {format(parseISO(s.app.created_at), "HH:mm")} · por{" "}
                               {nomePerfil(s.app.enfermeiro_id)}
                             </p>
@@ -225,11 +225,11 @@ export function Execucao({ plano, dados }: { plano: Plan; dados: DadosPlano }) {
 
 function StatusSemana({ sit }: { sit: "realizada" | "pulada" | "bloqueada" | "atrasada" | "a_realizar" }) {
   const cfg = {
-    realizada: { texto: "Realizada", cls: "border-emerald-200 bg-emerald-50 text-emerald-700" },
-    pulada: { texto: "Pulada", cls: "border-amber-200 bg-amber-50 text-amber-700" },
-    bloqueada: { texto: "Bloqueada", cls: "border-border bg-muted text-muted-foreground" },
-    atrasada: { texto: "Atrasada", cls: "border-red-200 bg-red-50 text-red-700" },
-    a_realizar: { texto: "A realizar", cls: "border-sky-200 bg-sky-50 text-sky-700" },
+    realizada: { texto: "Realizada", cls: "border-transparent bg-[var(--sucesso)]/10 text-[var(--sucesso)]" },
+    pulada: { texto: "Pulada", cls: "border-transparent bg-[var(--atencao)]/10 text-[var(--atencao)]" },
+    bloqueada: { texto: "Bloqueada", cls: "border-transparent bg-muted text-muted-foreground" },
+    atrasada: { texto: "Atrasada", cls: "border-transparent bg-[var(--erro)]/10 text-[var(--erro)]" },
+    a_realizar: { texto: "A realizar", cls: "border-transparent bg-[var(--info)]/10 text-[var(--info)]" },
   }[sit];
   return (
     <span className={`inline-flex shrink-0 items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-medium ${cfg.cls}`}>
@@ -332,7 +332,7 @@ function Realizar({
         </DialogHeader>
         <div className="grid gap-4">
           {linhas.map(({ dose, compra, f, produtosDaDose }) => (
-            <div key={dose.id} className="rounded-lg border p-3">
+            <div key={dose.id} className="rounded-[16px] border bg-card p-4">
               <div className="mb-2 flex flex-wrap items-end gap-3">
                 <div className="flex-1">
                   <p className="font-medium">{nomeCompra(dose.purchase_id)}</p>

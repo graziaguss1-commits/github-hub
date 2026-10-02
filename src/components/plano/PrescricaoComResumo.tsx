@@ -60,7 +60,7 @@ export function PrescricaoComResumo({ plano, dados }: { plano: Plan; dados: Dado
     .sort((a, b) => a.semana - b.semana || a.sub - b.sub);
 
   return (
-    <div className="rounded-2xl border bg-card p-5 shadow-sm">
+    <div className="cartao p-6">
       <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <div className="flex items-start gap-3">
           <CheckCircle2 className="mt-0.5 size-5" />
@@ -97,8 +97,8 @@ export function PrescricaoComResumo({ plano, dados }: { plano: Plan; dados: Dado
                   title={`${nomeCompra(d.purchase_id)} · ${qtd(d.dose, unidade(d.purchase_id))}`}
                   className={`inline-flex max-w-56 items-center gap-2 rounded-full px-3 py-1 text-sm ${
                     d.status === "realizada"
-                      ? "bg-emerald-700 text-white"
-                      : "bg-slate-900 text-white dark:bg-slate-700"
+                      ? "bg-[var(--sucesso)] text-white"
+                      : "bg-primary text-primary-foreground"
                   }`}
                 >
                   <span className="truncate">{nomeCompra(d.purchase_id)}</span>

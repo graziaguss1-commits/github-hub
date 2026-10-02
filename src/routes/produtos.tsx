@@ -54,7 +54,7 @@ function Produtos() {
       {isLoading ? null : produtos.length === 0 ? (
         <Vazio>Nenhum produto cadastrado.</Vazio>
       ) : (
-        <div className="rounded-lg border">
+        <div className="cartao overflow-hidden">
           <Table>
             <TableHeader>
               <TableRow>

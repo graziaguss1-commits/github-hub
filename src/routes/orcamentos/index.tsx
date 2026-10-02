@@ -21,11 +21,11 @@ export const Route = createFileRoute("/orcamentos/")({
 });
 
 const CORES: Record<QuoteStatus, string> = {
-  aprovado: "#0f172a",
-  enviado: "#3b82f6",
-  rascunho: "#94a3b8",
-  perdido: "#d97706",
-  cancelado: "#dc2626",
+  aprovado: "#0E1A34",
+  enviado: "#3D8CDB",
+  rascunho: "#555E72",
+  perdido: "#CF7317",
+  cancelado: "#D92626",
 };
 
 type Filtro = QuoteStatus | "" | "falta_prescrever";
@@ -102,8 +102,8 @@ function Orcamentos() {
 
       <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
         <Indicador rotulo="Taxa de conversão" valor={`${conversao.toLocaleString("pt-BR", { maximumFractionDigits: 1 })}%`} />
-        <Indicador rotulo="Aprovados" valor={contagem.aprovado} icone={<TrendingUp className="size-4 text-emerald-600" />} />
-        <Indicador rotulo="Perdidos" valor={contagem.perdido} icone={<TrendingDown className="size-4 text-red-600" />} />
+        <Indicador rotulo="Aprovados" valor={contagem.aprovado} icone={<TrendingUp className="size-4 text-[var(--sucesso)]" />} />
+        <Indicador rotulo="Perdidos" valor={contagem.perdido} icone={<TrendingDown className="size-4 text-[var(--erro)]" />} />
         <Indicador
           rotulo="Em aberto"
           valor={contagem.rascunho + contagem.enviado}
@@ -113,11 +113,11 @@ function Orcamentos() {
           <Indicador
             rotulo="Falta prescrever"
             valor={faltaPrescrever}
-            destaque="text-amber-600"
-            icone={<AlertTriangle className="size-4 text-amber-600" />}
+            destaque="text-[var(--atencao)]"
+            icone={<AlertTriangle className="size-4 text-[var(--atencao)]" />}
           />
         </button>
-        <div className="flex items-center justify-center rounded-2xl border bg-card p-4 shadow-sm">
+        <div className="cartao flex items-center justify-center p-4">
           <Rosca contagem={contagem} />
         </div>
       </div>
@@ -125,7 +125,7 @@ function Orcamentos() {
       {isLoading ? null : lista.length === 0 ? (
         <Vazio>Nenhum orçamento.</Vazio>
       ) : (
-        <div className="overflow-x-auto rounded-2xl border bg-card shadow-sm">
+        <div className="cartao overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b text-left text-muted-foreground">
@@ -160,7 +160,7 @@ function Orcamentos() {
                     >
                       {STATUS_ORCAMENTO[o.status].label}
                     </span>
-                    {o.falta_prescrever && <span className="ml-2 text-xs font-medium text-amber-600">falta prescrever</span>}
+                    {o.falta_prescrever && <span className="ml-2 text-xs font-medium text-[var(--atencao)]">falta prescrever</span>}
                   </td>
                   <td className="px-5 py-4">{data(o.created_at.slice(0, 10))}</td>
                   <td className="px-5 py-4 text-right">
@@ -197,7 +197,7 @@ function Indicador({
   destaque?: string;
 }) {
   return (
-    <div className="flex h-full items-start gap-3 rounded-2xl border bg-card p-5 shadow-sm">
+    <div className="flex h-full items-start gap-3 cartao p-6">
       {icone && <span className="mt-1">{icone}</span>}
       <div>
         <p className="text-sm text-muted-foreground">{rotulo}</p>

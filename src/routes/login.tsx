@@ -51,14 +51,14 @@ function Login() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-muted/40 px-4">
-      <form onSubmit={enviar} className="w-full max-w-sm rounded-xl border bg-card p-6 shadow-sm">
+    <div className="flex min-h-screen items-center justify-center bg-background px-4">
+      <form onSubmit={enviar} className="cartao w-full max-w-sm p-6">
         <div className="mb-6 flex items-center gap-2">
           <Syringe className="size-5 text-primary" />
           <h1 className="text-lg font-semibold">Controle de Aplicações</h1>
         </div>
         {!bancoConfigurado && (
-          <p className="mb-4 rounded-md bg-amber-100 p-3 text-sm text-amber-900">
+          <p className="mb-4 rounded-[12px] bg-[var(--atencao)]/10 p-3 text-sm text-[var(--atencao)]">
             O banco de dados ainda não foi ativado neste projeto.
           </p>
         )}

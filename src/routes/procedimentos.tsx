@@ -50,7 +50,7 @@ function Procedimentos() {
       {isLoading ? null : procs.length === 0 ? (
         <Vazio>Nenhum procedimento cadastrado.</Vazio>
       ) : (
-        <div className="rounded-lg border">
+        <div className="cartao overflow-hidden">
           <Table>
             <TableHeader>
               <TableRow>

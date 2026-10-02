@@ -57,7 +57,7 @@ function Orcamento() {
             </a>
           </Button>
           <Duplicar quoteId={quote.id} />
-          <span className="inline-flex items-center rounded-full bg-slate-900 px-4 py-2 text-sm font-medium text-white dark:bg-slate-700">
+          <span className="inline-flex items-center rounded-full bg-primary px-4 py-2 text-sm font-medium text-primary-foreground">
             {STATUS_ORCAMENTO[quote.status].label}
           </span>
         </>
@@ -249,7 +249,7 @@ function Itens({ dados, aberto }: { dados: DadosOrcamento; aberto: boolean }) {
   if (dados.itens.length === 0) return <Vazio>Nenhum item ainda. Adicione abaixo.</Vazio>;
 
   return (
-    <div className="overflow-x-auto rounded-2xl border bg-card">
+    <div className="cartao overflow-x-auto">
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b text-left text-muted-foreground">
@@ -678,7 +678,7 @@ function Totais({ dados, aberto }: { dados: DadosOrcamento; aberto: boolean }) {
         <div key={d.id} className="flex items-center justify-end gap-2 text-sm">
           <span className="text-muted-foreground">Desconto:</span>
           <span className="rounded-full border px-3 py-1">{d.motivo}</span>
-          <span className="rounded-full bg-slate-900 px-3 py-1 text-white dark:bg-slate-700">
+          <span className="rounded-full bg-primary px-3 py-1 text-primary-foreground">
             {d.tipo === "reais" ? "R$" : "%"}
           </span>
           <span className="w-24">{d.tipo === "reais" ? qtd(d.valor) : `${qtd(d.valor)}%`}</span>
@@ -742,7 +742,7 @@ function AlternarTipo({ valor, onChange }: { valor: "reais" | "percentual"; onCh
           key={t}
           type="button"
           onClick={() => onChange(t)}
-          className={`rounded-full px-3 py-1 text-sm ${valor === t ? "bg-slate-900 text-white dark:bg-slate-700" : ""}`}
+          className={`rounded-full px-3 py-1 text-sm ${valor === t ? "bg-primary text-primary-foreground" : ""}`}
         >
           {t === "reais" ? "R$" : "%"}
         </button>
@@ -773,7 +773,7 @@ function CondicaoPagamento({ quote, aberto }: { quote: Quote; aberto: boolean })
 
 function Cartao({ icone, titulo, children }: { icone: ReactNode; titulo: string; children: ReactNode }) {
   return (
-    <section className="rounded-2xl border bg-card p-5 shadow-sm">
+    <section className="cartao p-6">
       <h2 className="mb-3 flex items-center gap-2 font-semibold">
         {icone} {titulo}
       </h2>
@@ -823,7 +823,7 @@ function Acoes({ dados, irParaPrescricao }: { dados: DadosOrcamento; irParaPresc
         Perdido
       </Button>
       <Button
-        className="bg-red-600 text-white hover:bg-red-700"
+        className="bg-[var(--erro)] text-white hover:bg-[var(--erro)]/90"
         onClick={() => mudar("cancelado", "Cancelar este orçamento?")}
       >
         <AlertTriangle /> Cancelar orçamento

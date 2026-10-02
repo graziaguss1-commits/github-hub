@@ -42,7 +42,7 @@ function Equipe() {
         Quem cria acesso entra bloqueado. O admin libera, define o papel e preenche CRM/COREN e especialidade
         (saem no orçamento e no plano impressos). Para cadastrar um médico, ele cria o próprio acesso na tela de login.
       </p>
-      <div className="mb-8 rounded-lg border">
+      <div className="cartao mb-8 overflow-hidden">
         <Table>
           <TableHeader>
             <TableRow>
@@ -178,7 +178,7 @@ function SenhaEdicao() {
   });
 
   return (
-    <div className="max-w-md rounded-lg border p-4">
+    <div className="cartao max-w-md p-6">
       <h2 className="font-medium">Senha de edição de aplicações</h2>
       <p className="mb-4 mt-1 text-sm text-muted-foreground">
         Exigida para editar ou cancelar uma aplicação realizada. Fica guardada embaralhada no banco.{" "}
@@ -229,7 +229,7 @@ function DadosClinica() {
   });
 
   return (
-    <div className="max-w-md rounded-lg border p-4">
+    <div className="cartao max-w-md p-6">
       <h2 className="font-medium">Orçamento impresso</h2>
       <p className="mb-4 mt-1 text-sm text-muted-foreground">
         Nome no cabeçalho e texto do rodapé (endereço, telefone, validade do orçamento). Fica em branco se não preencher.

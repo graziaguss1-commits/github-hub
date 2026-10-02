@@ -46,7 +46,7 @@ export function Compras({ plano, dados }: { plano: Plan; dados: DadosPlano }) {
       {dados.saldo.length === 0 ? (
         <Vazio>Nenhum item comprado neste plano.</Vazio>
       ) : (
-        <div className="rounded-lg border">
+        <div className="cartao overflow-hidden">
           <Table>
             <TableHeader>
               <TableRow>

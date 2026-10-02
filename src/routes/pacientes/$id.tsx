@@ -211,10 +211,10 @@ function CabecalhoPlano({
         <div className="ml-auto">{podePlano && <StatusPlano plano={plano} />}</div>
       </div>
 
-      <div className="rounded-2xl bg-slate-900 px-5 py-4 text-white shadow-sm dark:bg-slate-950">
+      <div className="destaque px-6 py-5">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <p className="text-[11px] uppercase tracking-[0.2em] text-slate-400">Progresso do tratamento</p>
+            <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-white/60">Progresso do tratamento</p>
             <p className="mt-1 text-lg font-semibold">
               {realizadas} de {previstas} semanas realizadas
             </p>
@@ -223,25 +223,25 @@ function CabecalhoPlano({
             href={`/imprimir-plano/${plano.id}`}
             target="_blank"
             rel="noreferrer"
-            className="rounded-full bg-white/10 px-3 py-1.5 text-xs font-medium hover:bg-white/20"
+            className="rounded-full bg-white/[0.07] px-3 py-1.5 text-xs font-medium hover:bg-white/20"
           >
             Plano em PDF
           </a>
         </div>
         <div className="mt-3 h-1.5 rounded-full bg-white/10">
-          <div className="h-1.5 rounded-full bg-emerald-400" style={{ width: `${pct}%` }} />
+          <div className="h-1.5 rounded-full bg-[var(--sucesso)]" style={{ width: `${pct}%` }} />
         </div>
-        <div className="mt-2 flex justify-between font-mono text-[11px] uppercase tracking-wider text-slate-400">
+        <div className="mt-2 flex justify-between font-mono text-[11px] uppercase tracking-[0.16em] text-white/60">
           <span>Início {data(plano.inicio)}</span>
           <span>Fim previsto {data(fim)}</span>
         </div>
         <div className="mt-3 grid gap-2 sm:grid-cols-3">
           <Numero valor={realizadas} rotulo="realizadas" />
-          <Numero valor={puladas} rotulo="puladas" destaque="text-amber-300" />
+          <Numero valor={puladas} rotulo="puladas" destaque="text-[#f5b766]" />
           <Numero valor={Math.max(0, previstas - realizadas)} rotulo="a realizar" />
         </div>
         {plano.status === "ativo" && previstas > 0 && prog?.proxima_semana === null && (
-          <p className="mt-4 text-sm text-amber-300">Tratamento concluído: falta encerrar ou renovar.</p>
+          <p className="mt-4 text-sm text-[#f5b766]">Tratamento concluído: falta encerrar ou renovar.</p>
         )}
       </div>
     </div>
@@ -250,9 +250,9 @@ function CabecalhoPlano({
 
 function Numero({ valor, rotulo, destaque }: { valor: number; rotulo: string; destaque?: string }) {
   return (
-    <div className="rounded-xl bg-white/5 px-4 py-2.5">
+    <div className="rounded-xl bg-white/[0.07] px-4 py-2.5">
       <p className={`text-xl font-semibold ${destaque ?? ""}`}>{valor}</p>
-      <p className="text-xs text-slate-400">{rotulo}</p>
+      <p className="text-xs text-white/60">{rotulo}</p>
     </div>
   );
 }
@@ -278,7 +278,7 @@ function OrcamentosDoPaciente({ patientId }: { patientId: string }) {
   if (orcamentos.length === 0) return <Vazio>Nenhum orçamento para este paciente.</Vazio>;
   return (
     <section>
-      <ul className="divide-y rounded-lg border">
+      <ul className="cartao divide-y overflow-hidden">
         {orcamentos.map((o) => (
           <li key={o.quote_id}>
             <Link

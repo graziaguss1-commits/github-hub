@@ -143,22 +143,107 @@
   }
 }
 
-/* Controle de Aplicações — tema claro clínico */
+/* Identidade visual NutroClinic: Geist, azul-marinho #0E1A34, fundo gelo, cartões brancos. */
 :root {
-  --primary: oklch(0.45 0.09 195);
-  --primary-foreground: oklch(0.99 0 0);
-  --ring: oklch(0.55 0.09 195);
-  --sidebar-primary: oklch(0.45 0.09 195);
+  --radius: 20px;
+  --background: #f3f4f6;
+  --foreground: #0e1a34;
+  --card: #ffffff;
+  --card-foreground: #0e1a34;
+  --popover: #ffffff;
+  --popover-foreground: #0e1a34;
+  --primary: #0e1a34;
+  --primary-foreground: #ffffff;
+  --secondary: #eceff3;
+  --secondary-foreground: #0e1a34;
+  --muted: #eceff3;
+  --muted-foreground: #555e72;
+  --accent: #eceff3;
+  --accent-foreground: #0e1a34;
+  --destructive: #d92626;
+  --destructive-foreground: #ffffff;
+  --border: #e5e7eb;
+  --input: #dce0e5;
+  --ring: rgb(14 26 52 / 0.4);
+  --chart-1: #233e6e;
+  --chart-2: #379a69;
+  --chart-3: #cf7317;
+  --chart-4: #3d8cdb;
+  --chart-5: #8f4da6;
+  --sidebar: #f9fafb;
+  --sidebar-foreground: #0e1a34;
+  --sidebar-primary: #0e1a34;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #eceff3;
+  --sidebar-accent-foreground: #0e1a34;
+  --sidebar-border: #e5e7eb;
+  --sidebar-ring: rgb(14 26 52 / 0.4);
+  --sucesso: #2f7f58;
+  --atencao: #ad5c0b;
+  --erro: #d92626;
+  --info: #2268c3;
 }
 .dark {
-  --primary: oklch(0.72 0.1 195);
-  --primary-foreground: oklch(0.15 0.02 195);
-  --ring: oklch(0.72 0.1 195);
+  --background: #0f1218;
+  --foreground: #e8eaee;
+  --card: #14181f;
+  --card-foreground: #e8eaee;
+  --popover: #14181f;
+  --popover-foreground: #e8eaee;
+  --primary: #7fa6e8;
+  --primary-foreground: #0f1218;
+  --secondary: #1c212a;
+  --secondary-foreground: #e8eaee;
+  --muted: #1c212a;
+  --muted-foreground: #9aa3b2;
+  --accent: #1c212a;
+  --accent-foreground: #e8eaee;
+  --border: #252b35;
+  --input: #2c333e;
+  --ring: rgb(127 166 232 / 0.4);
+  --sidebar: #14181f;
+  --sidebar-foreground: #e8eaee;
+  --sidebar-primary: #7fa6e8;
+  --sidebar-primary-foreground: #0f1218;
+  --sidebar-accent: #1c212a;
+  --sidebar-border: #252b35;
 }
-/* Base menor (14px): letras e espaçamentos do Tailwind são em rem e diminuem juntos. */
-html {
-  font-size: 14px;
-}
+
 body {
-  font-family: "Inter", system-ui, sans-serif;
+  font-family: "Geist", system-ui, sans-serif;
+  font-size: 14px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-feature-settings: "cv11", "ss01";
+}
+h1, h2, h3, h4, h5, h6 {
+  font-weight: 700;
+  letter-spacing: -0.03em;
+}
+.font-mono, code {
+  font-family: "Geist Mono", ui-monospace, monospace;
+}
+
+/* Cartão: fundo branco, borda, raio 22px e sombra suave. */
+@utility cartao {
+  background-color: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 22px;
+  box-shadow: 0 1px 2px rgb(14 26 52 / 0.05), 0 10px 30px rgb(14 26 52 / 0.05);
+}
+
+/* Rótulo "eyebrow": Geist Mono, 11px, maiúsculas, espaçado. */
+@utility eyebrow {
+  font-family: "Geist Mono", ui-monospace, monospace;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: var(--muted-foreground);
+}
+
+/* Bloco de destaque azul-marinho (progresso do tratamento). */
+@utility destaque {
+  background-color: #0e1a34;
+  color: #ffffff;
+  border-radius: 22px;
 }

@@ -167,7 +167,7 @@ export function Prescricao({ plano, dados }: { plano: Plan; dados: DadosPlano })
 
   return (
     <div className="grid gap-4">
-      <div className="grid gap-2 rounded-lg border p-4">
+      <div className="cartao grid gap-2 p-6">
         <p className="text-sm font-medium">Saldo do que foi comprado e frequência de cada item</p>
         {pool.map(({ compra: c, prescrito, excede }) => {
           const cfg = configDe(c.id);
@@ -228,7 +228,7 @@ export function Prescricao({ plano, dados }: { plano: Plan; dados: DadosPlano })
             <Plus /> Semana
           </Button>
           <div className="flex-1" />
-          {sujo && <span className="text-sm text-amber-600">Alterações não salvas</span>}
+          {sujo && <span className="text-sm text-[var(--atencao)]">Alterações não salvas</span>}
           <Button onClick={() => salvar.mutate()} disabled={!sujo || algumExcede || salvar.isPending}>
             Salvar prescrição
           </Button>
@@ -267,7 +267,7 @@ export function Prescricao({ plano, dados }: { plano: Plan; dados: DadosPlano })
                     draggable={pode && !c.realizada}
                     onDragStart={(e) => e.dataTransfer.setData("text/plain", c.key)}
                     className={`flex items-center gap-1 rounded-full border px-3 py-1 text-sm ${
-                      c.realizada ? "border-emerald-300 bg-emerald-50 dark:bg-emerald-950" : "cursor-grab bg-background"
+                      c.realizada ? "border-transparent bg-[var(--sucesso)]/10 text-[var(--sucesso)]" : "cursor-grab bg-background"
                     }`}
                   >
                     <span>{cp ? nomeCompra(cp) : "…"}</span>

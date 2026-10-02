@@ -112,7 +112,7 @@ function Estoque() {
           {estoque.length === 0 ? (
             <Vazio>Cadastre produtos para ver o saldo.</Vazio>
           ) : (
-            <div className="rounded-lg border">
+            <div className="cartao overflow-hidden">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -147,7 +147,7 @@ function Estoque() {
           {lotes.length === 0 ? (
             <Vazio>Nenhum lote com saldo.</Vazio>
           ) : (
-            <div className="rounded-lg border">
+            <div className="cartao overflow-hidden">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -199,7 +199,7 @@ function Estoque() {
           {movimentos.length === 0 ? (
             <Vazio>Nenhum movimento ainda.</Vazio>
           ) : (
-            <div className="rounded-lg border">
+            <div className="cartao overflow-hidden">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -246,7 +246,7 @@ function Estoque() {
 
 function Alerta({ titulo, children }: { titulo: string; children: ReactNode }) {
   return (
-    <div className="rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200">
+    <div className="cartao p-5 text-sm text-[var(--atencao)]">
       <p className="mb-2 flex items-center gap-2 font-medium">
         <AlertTriangle className="size-4" /> {titulo}
       </p>

@@ -16,15 +16,29 @@ import { Button } from "@/components/ui/button";
 import { PAPEL_LABEL, useAuth } from "@/lib/auth";
 import { bancoConfigurado, supabase } from "@/lib/supabase";
 
-const NAV = [
-  { to: "/", label: "Início", icon: LayoutDashboard },
-  { to: "/pacientes", label: "Pacientes", icon: Users },
-  { to: "/orcamentos", label: "Orçamentos", icon: Receipt },
-  { to: "/estoque", label: "Estoque", icon: Boxes },
-  { to: "/produtos", label: "Produtos", icon: Package },
-  { to: "/procedimentos", label: "Procedimentos", icon: ClipboardList },
-  { to: "/equipe", label: "Equipe", icon: UserCog },
+const GRUPOS = [
+  {
+    rotulo: "Operação",
+    itens: [
+      { to: "/", label: "Início", icon: LayoutDashboard },
+      { to: "/pacientes", label: "Pacientes", icon: Users },
+      { to: "/orcamentos", label: "Orçamentos", icon: Receipt },
+    ],
+  },
+  {
+    rotulo: "Estoque",
+    itens: [
+      { to: "/estoque", label: "Estoque", icon: Boxes },
+      { to: "/produtos", label: "Produtos", icon: Package },
+      { to: "/procedimentos", label: "Procedimentos", icon: ClipboardList },
+    ],
+  },
+  {
+    rotulo: "Administração",
+    itens: [{ to: "/equipe", label: "Equipe", icon: UserCog }],
+  },
 ] as const;
+const NAV = GRUPOS.flatMap((g) => g.itens);
 
 export function AppShell({ titulo, acoes, children }: { titulo: string; acoes?: ReactNode; children: ReactNode }) {
   const { carregando, session, perfil } = useAuth();
@@ -65,58 +79,65 @@ export function AppShell({ titulo, acoes, children }: { titulo: string; acoes?: 
 
   return (
     <div className="flex min-h-screen bg-background">
-      <aside className="hidden w-56 shrink-0 flex-col border-r bg-sidebar px-3 py-5 md:flex">
-        <div className="flex items-center gap-2 px-2 pb-6">
-          <Syringe className="size-5 text-primary" />
-          <span className="font-semibold leading-tight">Controle de Aplicações</span>
+      <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col border-r border-sidebar-border bg-sidebar md:flex">
+        <div className="flex items-center gap-3 border-b border-sidebar-border px-5 py-5">
+          <span className="flex size-10 items-center justify-center rounded-xl border bg-card shadow-sm">
+            <Syringe className="size-5" />
+          </span>
+          <div className="leading-tight">
+            <p className="text-sm font-semibold tracking-[0.18em] uppercase">Controle</p>
+            <p className="eyebrow">de aplicações</p>
+          </div>
         </div>
-        <nav className="flex flex-1 flex-col gap-1">
-          {NAV.map((item) => (
-            <Link
-              key={item.to}
-              to={item.to}
-              activeOptions={{ exact: item.to === "/" }}
-              className="flex items-center gap-2 rounded-md px-2 py-2 text-sm text-sidebar-foreground hover:bg-sidebar-accent"
-              activeProps={{ className: "bg-sidebar-accent font-medium" }}
-            >
-              <item.icon className="size-4" />
-              {item.label}
-            </Link>
+        <nav className="flex flex-1 flex-col gap-5 overflow-y-auto px-3 py-5">
+          {GRUPOS.map((g) => (
+            <div key={g.rotulo} className="grid gap-1">
+              <p className="eyebrow px-3 pb-1">{g.rotulo}</p>
+              {g.itens.map((item) => (
+                <Link
+                  key={item.to}
+                  to={item.to}
+                  activeOptions={{ exact: item.to === "/" }}
+                  className="flex items-center gap-3 rounded-xl px-3 py-2 text-[15px] text-sidebar-foreground hover:bg-sidebar-accent"
+                  activeProps={{ className: "!bg-primary !text-primary-foreground font-medium" }}
+                >
+                  <item.icon className="size-4" />
+                  {item.label}
+                </Link>
+              ))}
+            </div>
           ))}
         </nav>
-        <div className="border-t pt-4 text-sm">
-          <p className="truncate px-2 font-medium">{perfil.nome}</p>
-          <p className="px-2 text-xs text-muted-foreground">{PAPEL_LABEL[perfil.papel]}</p>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="mt-2 w-full justify-start"
-            onClick={() => void supabase.auth.signOut()}
-          >
-            <LogOut /> Sair
+        <div className="flex items-center justify-between border-t border-sidebar-border px-5 py-4 text-sm">
+          <div className="min-w-0">
+            <p className="truncate font-medium">{perfil.nome}</p>
+            <p className="text-xs text-muted-foreground">{PAPEL_LABEL[perfil.papel]}</p>
+          </div>
+          <Button variant="ghost" size="icon" onClick={() => void supabase.auth.signOut()} aria-label="Sair">
+            <LogOut />
           </Button>
         </div>
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <nav className="flex gap-1 overflow-x-auto border-b px-3 py-2 md:hidden">
+        <nav className="flex gap-1 overflow-x-auto border-b bg-sidebar px-3 py-2 md:hidden">
           {NAV.map((item) => (
             <Link
               key={item.to}
               to={item.to}
               activeOptions={{ exact: item.to === "/" }}
               className="whitespace-nowrap rounded-md px-3 py-1.5 text-sm"
-              activeProps={{ className: "bg-accent font-medium" }}
+              activeProps={{ className: "!bg-primary !text-primary-foreground font-medium" }}
             >
               {item.label}
             </Link>
           ))}
         </nav>
-        <header className="flex flex-wrap items-center justify-between gap-3 border-b px-4 py-4 md:px-8">
-          <h1 className="text-xl font-semibold tracking-tight">{titulo}</h1>
-          <div className="flex flex-wrap gap-2">{acoes}</div>
+        <header className="flex flex-wrap items-center justify-between gap-3 px-4 pb-2 pt-8 md:px-8">
+          <h1 className="text-2xl">{titulo}</h1>
+          <div className="flex flex-wrap items-center gap-2">{acoes}</div>
         </header>
-        <main className="flex-1 px-4 py-6 md:px-8">{children}</main>
+        <main className="flex-1 px-4 pb-10 pt-4 md:px-8">{children}</main>
       </div>
     </div>
   );
