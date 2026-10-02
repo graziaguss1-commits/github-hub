@@ -1,9 +1,14 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
-// Lovable Cloud injeta estas variáveis quando o banco é ativado no projeto.
+// Banco Supabase próprio (plano Free, São Paulo). O Lovable não lê o .env do repositório,
+// então o endereço fica aqui. A chave publicável é pública por natureza: quem protege os
+// dados são as regras (RLS) do banco.
+const SUPABASE_URL = "https://bpcapmktfbphkdzyuhqr.supabase.co";
+const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_Y60Spqe7oKqb-z5xtVBlyA_BCkRU631";
+
 const env = import.meta.env as Record<string, string | undefined>;
-const url = env["VITE_SUPABASE_URL"];
-const key = env["VITE_SUPABASE_PUBLISHABLE_KEY"] ?? env["VITE_SUPABASE_ANON_KEY"];
+const url = env["VITE_SUPABASE_URL"] || SUPABASE_URL;
+const key = env["VITE_SUPABASE_PUBLISHABLE_KEY"] || env["VITE_SUPABASE_ANON_KEY"] || SUPABASE_PUBLISHABLE_KEY;
 
 export const bancoConfigurado = Boolean(url && key);
 

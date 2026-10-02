@@ -37,7 +37,7 @@ export function AppShell({ titulo, acoes, children }: { titulo: string; acoes?: 
       <Centro>
         <h1 className="text-lg font-semibold">Banco de dados não configurado</h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          Ative o Lovable Cloud neste projeto e aplique a migração em <code>supabase/migrations</code>.
+          Confira o endereço do banco em <code>src/lib/supabase.ts</code>.
         </p>
       </Centro>
     );
