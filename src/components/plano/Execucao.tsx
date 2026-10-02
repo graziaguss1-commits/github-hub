@@ -77,7 +77,7 @@ export function Execucao({ plano, dados }: { plano: Plan; dados: DadosPlano }) {
   if (semanas.length === 0) return <Vazio>Nenhuma semana prescrita ainda.</Vazio>;
 
   return (
-    <div className="grid gap-4">
+    <div className="grid gap-2.5">
       {semanas.map(({ semana, subs }) => {
         const ini = inicioDaSemana(plano.inicio, semana);
         const sits = subs.map(situacao);
@@ -86,10 +86,10 @@ export function Execucao({ plano, dados }: { plano: Plan; dados: DadosPlano }) {
         const dividida = subs.length > 1;
 
         return (
-          <div key={semana} className="rounded-xl border bg-card p-5 shadow-sm">
-            <div className="flex gap-4">
+          <div key={semana} className="rounded-xl border bg-card px-4 py-3 text-sm shadow-sm">
+            <div className="flex gap-3">
               <div
-                className={`flex size-9 shrink-0 items-center justify-center rounded-full text-sm font-medium ${
+                className={`flex size-7 shrink-0 items-center justify-center rounded-full text-xs font-medium ${
                   tudoFeito
                     ? "bg-emerald-700 text-white"
                     : algumAtraso
@@ -97,13 +97,13 @@ export function Execucao({ plano, dados }: { plano: Plan; dados: DadosPlano }) {
                       : "bg-muted text-muted-foreground"
                 }`}
               >
-                {tudoFeito ? <CheckCircle2 className="size-5" /> : semana}
+                {tudoFeito ? <CheckCircle2 className="size-4" /> : semana}
               </div>
 
               <div className="min-w-0 flex-1">
-                <div className="mb-2 flex flex-wrap items-center gap-2">
+                <div className="mb-1 flex flex-wrap items-center gap-2">
                   <span className="font-semibold">Semana {semana}</span>
-                  <span className="text-muted-foreground">
+                  <span className="text-xs text-muted-foreground">
                     {dataCurta(ini)} a {dataCurta(addDays(ini, 6))}
                   </span>
                   {dividida && (
@@ -162,20 +162,20 @@ export function Execucao({ plano, dados }: { plano: Plan; dados: DadosPlano }) {
                                 );
                               })}
                           {sit === "realizada" && s.app && (
-                            <p className="text-sm text-emerald-700">
+                            <p className="text-xs text-emerald-700">
                               Aplicada em {data(s.app.data_aplicacao)} · {format(parseISO(s.app.created_at), "HH:mm")} · por{" "}
                               {nomePerfil(s.app.enfermeiro_id)}
                             </p>
                           )}
                           {s.app?.observacoes && (
-                            <p className="text-sm italic text-muted-foreground">
+                            <p className="text-xs italic text-muted-foreground">
                               {sit === "pulada" ? "Motivo: " : ""}
                               {s.app.observacoes}
                             </p>
                           )}
 
                           {pode && (
-                            <div className="flex flex-wrap gap-2 pt-1">
+                            <div className="flex flex-wrap gap-1.5 pt-1 [&_button]:h-7 [&_button]:px-2.5 [&_button]:text-xs">
                               {(sit === "a_realizar" || sit === "atrasada") && s.doses.length > 0 && (
                                 <>
                                   <Button size="sm" onClick={() => setRealizar(s)}>
@@ -232,8 +232,8 @@ function StatusSemana({ sit }: { sit: "realizada" | "pulada" | "bloqueada" | "at
     a_realizar: { texto: "A realizar", cls: "border-sky-200 bg-sky-50 text-sky-700" },
   }[sit];
   return (
-    <span className={`inline-flex shrink-0 items-center gap-1 rounded-full border px-3 py-1 text-sm font-medium ${cfg.cls}`}>
-      {sit === "realizada" && <CheckCircle2 className="size-4" />}
+    <span className={`inline-flex shrink-0 items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-medium ${cfg.cls}`}>
+      {sit === "realizada" && <CheckCircle2 className="size-3.5" />}
       {cfg.texto}
     </span>
   );

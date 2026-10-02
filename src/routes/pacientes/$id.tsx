@@ -182,7 +182,7 @@ function CabecalhoPlano({
   const pct = previstas ? (100 * realizadas) / previstas : 0;
 
   return (
-    <div className="mb-6 grid gap-4">
+    <div className="mb-4 grid gap-3">
       <div className="flex flex-wrap items-center gap-3">
         {planos.length > 1 ? (
           <Seletor className="w-auto" value={plano.id} onChange={(e) => setPlanoId(e.target.value)}>
@@ -193,7 +193,7 @@ function CabecalhoPlano({
             ))}
           </Seletor>
         ) : (
-          <span className="text-muted-foreground">
+          <span className="text-sm text-muted-foreground">
             Tratamento {data(plano.inicio)} — {data(fim)}
           </span>
         )}
@@ -201,7 +201,7 @@ function CabecalhoPlano({
           <Link
             to="/orcamentos/$id"
             params={{ id: quote.id }}
-            className="rounded-full border px-3 py-1 text-sm font-semibold hover:bg-muted"
+            className="rounded-full border px-2.5 py-0.5 text-xs font-semibold hover:bg-muted"
           >
             Orçamento #{quote.numero}
           </Link>
@@ -211,11 +211,11 @@ function CabecalhoPlano({
         <div className="ml-auto">{podePlano && <StatusPlano plano={plano} />}</div>
       </div>
 
-      <div className="rounded-2xl bg-slate-900 p-6 text-white shadow-sm dark:bg-slate-950">
+      <div className="rounded-2xl bg-slate-900 px-5 py-4 text-white shadow-sm dark:bg-slate-950">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Progresso do tratamento</p>
-            <p className="mt-1 text-2xl font-semibold">
+            <p className="text-[11px] uppercase tracking-[0.2em] text-slate-400">Progresso do tratamento</p>
+            <p className="mt-1 text-lg font-semibold">
               {realizadas} de {previstas} semanas realizadas
             </p>
           </div>
@@ -223,19 +223,19 @@ function CabecalhoPlano({
             href={`/imprimir-plano/${plano.id}`}
             target="_blank"
             rel="noreferrer"
-            className="rounded-full bg-white/10 px-4 py-2 text-sm font-medium hover:bg-white/20"
+            className="rounded-full bg-white/10 px-3 py-1.5 text-xs font-medium hover:bg-white/20"
           >
             Plano em PDF
           </a>
         </div>
-        <div className="mt-5 h-2 rounded-full bg-white/10">
-          <div className="h-2 rounded-full bg-emerald-400" style={{ width: `${pct}%` }} />
+        <div className="mt-3 h-1.5 rounded-full bg-white/10">
+          <div className="h-1.5 rounded-full bg-emerald-400" style={{ width: `${pct}%` }} />
         </div>
-        <div className="mt-2 flex justify-between font-mono text-xs uppercase tracking-wider text-slate-400">
+        <div className="mt-2 flex justify-between font-mono text-[11px] uppercase tracking-wider text-slate-400">
           <span>Início {data(plano.inicio)}</span>
           <span>Fim previsto {data(fim)}</span>
         </div>
-        <div className="mt-5 grid gap-3 sm:grid-cols-3">
+        <div className="mt-3 grid gap-2 sm:grid-cols-3">
           <Numero valor={realizadas} rotulo="realizadas" />
           <Numero valor={puladas} rotulo="puladas" destaque="text-amber-300" />
           <Numero valor={Math.max(0, previstas - realizadas)} rotulo="a realizar" />
@@ -250,9 +250,9 @@ function CabecalhoPlano({
 
 function Numero({ valor, rotulo, destaque }: { valor: number; rotulo: string; destaque?: string }) {
   return (
-    <div className="rounded-xl bg-white/5 px-5 py-4">
-      <p className={`text-3xl font-semibold ${destaque ?? ""}`}>{valor}</p>
-      <p className="text-sm text-slate-400">{rotulo}</p>
+    <div className="rounded-xl bg-white/5 px-4 py-2.5">
+      <p className={`text-xl font-semibold ${destaque ?? ""}`}>{valor}</p>
+      <p className="text-xs text-slate-400">{rotulo}</p>
     </div>
   );
 }
