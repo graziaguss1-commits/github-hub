@@ -8,7 +8,10 @@ O código é editado por este repositório; cada push na `main` sincroniza com o
 
 ## O que existe
 
-- Orçamentos: itens com preço, descontos com motivo (R$ ou %), impressão/PDF; aprovar gera o plano
+- Orçamentos: itens com preço, descontos com motivo (R$ ou %), impressão/PDF com médico e validade de 7 dias;
+  aprovar gera o plano e abre a prescrição por semana no próprio orçamento (frequência por item)
+- Plano de tratamento impresso no nome do paciente (semanas, doses, situação)
+- Equipe com CRM/COREN e especialidade
 - Cadastros: produtos (unidade de estoque única), procedimentos (código PROC-0001) e composição
 - Estoque: entrada de lote, ajuste com motivo, saldo por produto, alertas de mínimo e vencimento
 - Plano do paciente: itens comprados, prescrição por semanas (chips, distribuição automática, arrastar)
