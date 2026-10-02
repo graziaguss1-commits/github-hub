@@ -1,24 +1,40 @@
-# GitHub Hub
+# Controle de Aplicações
 
-Crie um painel integrado à API do GitHub para acompanhar meus repositórios e suas atividades.
+Sistema interno para controlar aplicações de medicação injetável: o que o paciente comprou,
+a prescrição por semanas, a aplicação feita pela enfermagem e a baixa do estoque por lote.
 
-This project was built with [Lovable](https://lovable.dev).
+Projeto no Lovable: https://lovable.dev/projects/9cec097d-16ea-4ae1-9948-7e39468df4c5
+O código é editado por este repositório; cada push na `main` sincroniza com o Lovable.
 
-## Build with Lovable
+## Fase 1 (o que existe)
 
-Continue developing this project in the [Lovable editor](https://lovable.dev/projects/9cec097d-16ea-4ae1-9948-7e39468df4c5).
+- Cadastros: produtos (unidade de estoque única), procedimentos (código PROC-0001) e composição
+- Estoque: entrada de lote, ajuste com motivo, saldo por produto, alertas de mínimo e vencimento
+- Plano do paciente: itens comprados, prescrição por semanas (chips, distribuição automática, arrastar)
+- Aplicação: dose real, lote sugerido por validade mais próxima, baixa numa única transação no banco
+- Pular semana (empurra as seguintes), editar dose e cancelar com senha de edição
+- Saldo (contratado x prescrito x aplicado) e progresso calculados por visões no banco
+- Equipe: primeiro usuário vira admin; os demais entram bloqueados até o admin liberar
 
-- **Ship faster**: describe what you want to build and Lovable handles the code.
-- **Stay in sync**: every change made in Lovable is committed straight to this repository.
-- **Full ownership**: this code is yours. Push to `main` on GitHub and your changes sync back into Lovable, ready for your next prompt.
+Fora da fase 1: orçamento com pagamentos, nota fiscal, descontos, cashback, recibo, importação por
+Excel, acompanhamento e encerramento com saldo importado para novo orçamento.
 
-## Development
+## Banco de dados
 
-Prefer working locally? You need Node.js and npm — [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating).
+Tudo está em `supabase/migrations/`. Regras que ficam no banco (não na tela):
 
-```sh
-git clone <this-repository-url>
-cd <repository-name>
-npm i
-npm run dev
-```
+| Função | O que faz |
+|---|---|
+| `realizar_aplicacao` | Grava aplicação, itens, consumo por lote, baixa o lote e o movimento — tudo ou nada |
+| `pular_semana` | Marca a semana como pulada e empurra as doses seguintes |
+| `editar_dose_aplicacao` | Exige senha; ajusta o lote pela diferença |
+| `cancelar_aplicacao` | Exige senha; devolve ao lote (estorno) ou desfaz a semana pulada |
+| `salvar_prescricao` | Regrava doses previstas; trava semanas feitas; bloqueia o que excede o contratado |
+| `entrada_lote` / `ajustar_lote` | Entrada e ajuste de estoque com movimento e auditoria |
+
+Toda ação sensível grava em `audit_log` quem fez, quando e o motivo.
+
+Regra de consumo: produto na mesma unidade da dose (UI ou mL) consome a dose aplicada;
+nos demais casos consome a quantidade padrão da composição.
+
+**Dados de paciente reais nunca entram neste repositório.**
