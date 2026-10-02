@@ -21,7 +21,8 @@ Excel, acompanhamento e encerramento com saldo importado para novo orçamento.
 
 ## Banco de dados
 
-Tudo está em `supabase/migrations/`. Regras que ficam no banco (não na tela):
+Supabase próprio (plano Free, organização IA Doutor, projeto `controle-aplicacoes`, região São Paulo),
+ligado pelo `.env`. Não usa o Lovable Cloud. Tudo está em `supabase/migrations/`, já aplicado. Regras que ficam no banco (não na tela):
 
 | Função | O que faz |
 |---|---|

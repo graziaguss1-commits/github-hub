@@ -452,7 +452,6 @@ set search_path = public
 as $$
 declare
   v_lot public.stock_lots;
-  v_lote_nome text;
 begin
   select * into v_lot from public.stock_lots where id = p_lot_id for update;
   if not found then raise exception 'Lote não encontrado.'; end if;
@@ -490,6 +489,7 @@ create or replace function public.consumo_produto(
 returns numeric
 language sql
 immutable
+set search_path = public
 as $$
   select case when p_unidade_dose in ('ui', 'ml') and p_unidade_produto = p_unidade_dose
               then p_dose else p_quantidade_padrao end
@@ -645,7 +645,7 @@ begin
     update public.plan_doses set status = 'realizada' where id = v_dose.id;
 
     for v_comp in
-      select pi.product_id, pi.quantidade_padrao, pr.unidade, pr.nome, pr.controla_lote
+      select pi.product_id, pi.quantidade_padrao, pr.unidade, pr.nome
         from public.procedure_items pi
         join public.products pr on pr.id = pi.product_id
        where pi.procedure_id = v_purchase.procedure_id
