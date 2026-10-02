@@ -56,10 +56,25 @@ export type StockLot = {
 
 export type Patient = {
   id: string;
+  codigo: string;
   nome: string;
+  cpf: string | null;
+  data_nascimento: string | null;
   telefone: string | null;
   observacoes: string | null;
   created_at: string;
+};
+
+export type PacienteLista = {
+  id: string;
+  codigo: string;
+  nome: string;
+  cpf: string | null;
+  telefone: string | null;
+  data_nascimento: string | null;
+  created_at: string;
+  ultima_aplicacao: string | null;
+  situacao: "em_tratamento" | "concluido" | "sem_plano";
 };
 
 export type Plan = {

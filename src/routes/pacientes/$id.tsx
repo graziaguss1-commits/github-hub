@@ -17,7 +17,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { usePode } from "@/lib/auth";
-import { brl, data, hojeISO, inicioDaSemana } from "@/lib/format";
+import { brl, data, hojeISO, idade, inicioDaSemana } from "@/lib/format";
 import { usePerfis } from "@/lib/queries";
 import { check, supabase } from "@/lib/supabase";
 import type { Patient, Plan, ProgressoPlano } from "@/lib/types";
@@ -79,7 +79,14 @@ function PacienteDetalhe() {
         </>
       }
     >
-      {paciente?.telefone && <p className="mb-4 text-sm text-muted-foreground">Telefone: {paciente.telefone}</p>}
+      {paciente && (
+        <p className="mb-4 flex flex-wrap gap-x-3 text-sm text-muted-foreground">
+          <span className="font-mono">{paciente.codigo}</span>
+          {paciente.cpf && <span>CPF {paciente.cpf}</span>}
+          {idade(paciente.data_nascimento) !== null && <span>{idade(paciente.data_nascimento)} anos</span>}
+          {paciente.telefone && <span>{paciente.telefone}</span>}
+        </p>
+      )}
 
       <Tabs defaultValue="cronograma">
         <TabsList className="mb-6 h-auto flex-wrap rounded-xl p-1">

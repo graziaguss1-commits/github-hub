@@ -50,3 +50,12 @@ export function diasAte(iso: string | null | undefined): number | null {
 export function rotuloSemana(semana: number, sub: number): string {
   return sub > 1 ? `Semana ${semana}·${sub}` : `Semana ${semana}`;
 }
+
+export function idade(nascimento: string | null | undefined): number | null {
+  if (!nascimento) return null;
+  const n = parseISO(nascimento);
+  const hoje = new Date();
+  let anos = hoje.getFullYear() - n.getFullYear();
+  if (hoje.getMonth() < n.getMonth() || (hoje.getMonth() === n.getMonth() && hoje.getDate() < n.getDate())) anos--;
+  return anos;
+}
