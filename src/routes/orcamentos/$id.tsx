@@ -1,4 +1,4 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { ArrowLeft, Check, Plus, Printer, Send, Trash2 } from "lucide-react";
 import { useState } from "react";
@@ -13,6 +13,8 @@ import {
   useRecarregarOrcamento,
   type DadosOrcamento,
 } from "@/components/orcamento/dados";
+import { useDadosPlano } from "@/components/plano/dados";
+import { Prescricao } from "@/components/plano/Prescricao";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -21,7 +23,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { brl, data, hojeISO, num, qtd, UNIDADE_LABEL } from "@/lib/format";
 import { useComposicao, usePerfis, useProcedimentos, useProdutos } from "@/lib/queries";
 import { check, supabase } from "@/lib/supabase";
-import type { QuoteItem, QuoteStatus, UnidadeDose } from "@/lib/types";
+import type { Plan, QuoteItem, QuoteStatus, UnidadeDose } from "@/lib/types";
 
 export const Route = createFileRoute("/orcamentos/$id")({
   head: () => ({ meta: [{ title: "Orçamento — Controle de Aplicações" }] }),
@@ -84,7 +86,31 @@ function Orcamento() {
           {aberto && <Acoes dados={dados} />}
         </aside>
       </div>
+
+      {quote.status === "aprovado" && quote.plan_id && <PrescricaoDoOrcamento planId={quote.plan_id} />}
     </AppShell>
+  );
+}
+
+function PrescricaoDoOrcamento({ planId }: { planId: string }) {
+  const { data: plano } = useQuery({
+    queryKey: ["plans", "id", planId],
+    queryFn: async () => check(await supabase.from("plans").select("*").eq("id", planId).single()) as Plan,
+  });
+  const { data: dados } = useDadosPlano(planId);
+  if (!plano || !dados) return null;
+  // Recria o editor só quando as doses gravadas mudam.
+  const versao = dados.doses.map((d) => `${d.id}:${d.semana}:${d.sub_semana}:${d.dose}:${d.status}`).join("|");
+  return (
+    <section id="prescricao" className="mt-10 border-t pt-6">
+      <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2">
+        <h2 className="text-lg font-semibold">Prescrição por semana</h2>
+        <span className="text-sm text-muted-foreground">
+          Semana 1 começa em {data(plano.inicio)} · a aplicação é registrada na página do paciente
+        </span>
+      </div>
+      <Prescricao key={`${plano.id}:${versao}`} plano={plano} dados={dados} />
+    </section>
   );
 }
 
@@ -518,7 +544,6 @@ function Acoes({ dados }: { dados: DadosOrcamento }) {
 
 function Aprovar({ dados, fechar }: { dados: DadosOrcamento; fechar: () => void }) {
   const qc = useQueryClient();
-  const navigate = useNavigate();
   const { data: perfis = [] } = usePerfis();
   const [inicio, setInicio] = useState(hojeISO());
   const [medico, setMedico] = useState(dados.quote.medico_id ?? "");
@@ -533,10 +558,11 @@ function Aprovar({ dados, fechar }: { dados: DadosOrcamento; fechar: () => void 
         }),
       ),
     onSuccess: () => {
-      toast.success("Orçamento aprovado. Plano criado: agora monte a prescrição.");
+      toast.success("Orçamento aprovado. Agora prescreva as semanas logo abaixo.");
       for (const k of [["orcamento"], ["orcamentos"], ["plans"], ["plano"], ["v_progresso_plano"]])
         void qc.invalidateQueries({ queryKey: k });
-      void navigate({ to: "/pacientes/$id", params: { id: dados.paciente.id } });
+      fechar();
+      setTimeout(() => document.getElementById("prescricao")?.scrollIntoView({ behavior: "smooth" }), 600);
     },
     onError: (e) => toast.error(e.message),
   });
@@ -548,8 +574,8 @@ function Aprovar({ dados, fechar }: { dados: DadosOrcamento; fechar: () => void 
           <DialogTitle>Aprovar orçamento nº {dados.quote.numero}</DialogTitle>
         </DialogHeader>
         <p className="text-sm text-muted-foreground">
-          Cria o plano de tratamento de {dados.paciente.nome} com os {dados.itens.length} item(ns) deste orçamento.
-          Depois de aprovado, o orçamento não pode mais ser alterado.
+          Cria o plano de tratamento de {dados.paciente.nome} com os {dados.itens.length} item(ns) deste orçamento
+          e abre a prescrição por semana aqui mesmo. Depois de aprovado, o orçamento não pode mais ser alterado.
         </p>
         <div className="grid gap-3">
           <Campo label="Início do tratamento (semana 1)">

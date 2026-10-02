@@ -26,6 +26,17 @@ type Chip = {
 let seq = 0;
 const novaChave = () => `n${++seq}`;
 
+// Frequência por item, como no NutroClinic.
+type Frequencia = "2x" | "semanal" | "quinzenal" | "mensal" | "n";
+const FREQUENCIAS: { valor: Frequencia; rotulo: string }[] = [
+  { valor: "semanal", rotulo: "Semanal" },
+  { valor: "2x", rotulo: "2x por semana" },
+  { valor: "quinzenal", rotulo: "Quinzenal" },
+  { valor: "mensal", rotulo: "Mensal (a cada 4 semanas)" },
+  { valor: "n", rotulo: "A cada N semanas" },
+];
+type Config = { frequencia: Frequencia; cadaN: string; inicio: string };
+
 export function Prescricao({ plano, dados }: { plano: Plan; dados: DadosPlano }) {
   const pode = usePode("admin", "medico") && plano.status !== "encerrado";
   const recarregar = useRecarregarPlano();
@@ -42,7 +53,7 @@ export function Prescricao({ plano, dados }: { plano: Plan; dados: DadosPlano })
     })),
   );
   const [extras, setExtras] = useState<string[]>([]);
-  const [frequencia, setFrequencia] = useState<"1" | "2">("1");
+  const [config, setConfig] = useState<Record<string, Config>>({});
   const [sujo, setSujo] = useState(false);
 
   // semanas realizadas ou puladas ficam travadas
@@ -85,26 +96,41 @@ export function Prescricao({ plano, dados }: { plano: Plan; dados: DadosPlano })
     setSujo(true);
   }
 
-  function distribuir() {
-    const ultimaTravada = Math.max(0, ...[...travadas].map((k) => Number(k.split("-")[0])));
-    const inicio = ultimaTravada + 1;
-    const subs = frequencia === "2" ? [1, 2] : [1];
-    const realizadas = chips.filter((c) => c.realizada);
+  const primeiraLivre = Math.max(0, ...[...travadas].map((k) => Number(k.split("-")[0]))) + 1;
+  const configDe = (id: string): Config =>
+    config[id] ?? { frequencia: "semanal", cadaN: "3", inicio: String(primeiraLivre) };
+
+  /** Refaz as doses previstas de um item a partir da frequência escolhida para ele. */
+  function dosesDoItem(c: PlanPurchase, base: Chip[]): Chip[] {
+    const cfg = configDe(c.id);
+    const passo =
+      cfg.frequencia === "quinzenal" ? 2 : cfg.frequencia === "mensal" ? 4 : cfg.frequencia === "n" ? Math.max(1, Math.round(num(cfg.cadaN))) : 1;
+    const subs = cfg.frequencia === "2x" ? [1, 2] : [1];
+    let semana = Math.max(primeiraLivre, Math.round(num(cfg.inicio)) || primeiraLivre);
+    let restante =
+      c.contratado - base.filter((x) => x.realizada && x.purchase_id === c.id).reduce((s, x) => s + num(x.dose), 0);
     const novas: Chip[] = [];
-    for (const c of dados.compras) {
-      let restante = c.contratado - realizadas.filter((x) => x.purchase_id === c.id).reduce((s, x) => s + num(x.dose), 0);
-      let i = 0;
-      while (restante > 1e-9) {
+    let guarda = 0;
+    while (restante > 1e-9 && guarda++ < 500) {
+      for (const sub of subs) {
+        if (restante <= 1e-9) break;
+        if (travadas.has(chaveSemana(semana, sub))) continue;
         const dose = Math.min(c.dose_padrao, restante);
-        const sub = subs[i % subs.length] ?? 1;
-        const semana = inicio + Math.floor(i / subs.length);
         novas.push({ key: novaChave(), purchase_id: c.id, semana, sub_semana: sub, dose: String(dose), realizada: false });
         restante -= dose;
-        i++;
       }
+      semana += passo;
     }
+    return novas;
+  }
+
+  function distribuirItem(c: PlanPurchase) {
+    mudar((cs) => [...cs.filter((x) => x.purchase_id !== c.id || x.realizada), ...dosesDoItem(c, cs)]);
+  }
+
+  function distribuirTodos() {
     setExtras([]);
-    mudar(() => [...realizadas, ...novas]);
+    mudar((cs) => [...cs.filter((x) => x.realizada), ...dados.compras.flatMap((c) => dosesDoItem(c, cs))]);
   }
 
   function soltar(e: DragEvent, semana: number, sub: number) {
@@ -142,26 +168,61 @@ export function Prescricao({ plano, dados }: { plano: Plan; dados: DadosPlano })
   return (
     <div className="grid gap-4">
       <div className="grid gap-2 rounded-lg border p-4">
-        <p className="text-sm font-medium">Saldo do que foi comprado</p>
-        {pool.map(({ compra: c, prescrito, excede }) => (
-          <div key={c.id} className="flex flex-wrap items-center gap-2 text-sm">
-            <span className="min-w-48 font-medium">{nomeCompra(c)}</span>
-            <span className={excede ? "font-medium text-destructive" : "text-muted-foreground"}>
-              {qtd(prescrito)} / {qtd(c.contratado, c.unidade_dose)} (restam {qtd(Math.max(0, c.contratado - prescrito))})
-            </span>
-            {excede && <Etiqueta tom="perigo">Excede</Etiqueta>}
-          </div>
-        ))}
+        <p className="text-sm font-medium">Saldo do que foi comprado e frequência de cada item</p>
+        {pool.map(({ compra: c, prescrito, excede }) => {
+          const cfg = configDe(c.id);
+          const setCfg = (m: Partial<Config>) => setConfig((x) => ({ ...x, [c.id]: { ...cfg, ...m } }));
+          return (
+            <div key={c.id} className="flex flex-wrap items-center gap-2 border-t pt-2 text-sm first:border-t-0 first:pt-0">
+              <span className="min-w-48 font-medium">{nomeCompra(c)}</span>
+              <span className={excede ? "font-medium text-destructive" : "text-muted-foreground"}>
+                {qtd(prescrito)} / {qtd(c.contratado, c.unidade_dose)} (restam {qtd(Math.max(0, c.contratado - prescrito))})
+              </span>
+              {excede && <Etiqueta tom="perigo">Excede</Etiqueta>}
+              {pode && (
+                <div className="ml-auto flex flex-wrap items-center gap-2">
+                  <Seletor
+                    className="h-8 w-auto"
+                    value={cfg.frequencia}
+                    onChange={(e) => setCfg({ frequencia: e.target.value as Frequencia })}
+                  >
+                    {FREQUENCIAS.map((f) => (
+                      <option key={f.valor} value={f.valor}>
+                        {f.rotulo}
+                      </option>
+                    ))}
+                  </Seletor>
+                  {cfg.frequencia === "n" && (
+                    <Input
+                      className="h-8 w-16"
+                      inputMode="numeric"
+                      value={cfg.cadaN}
+                      onChange={(e) => setCfg({ cadaN: e.target.value })}
+                      aria-label="A cada quantas semanas"
+                    />
+                  )}
+                  <span className="text-xs text-muted-foreground">a partir da semana</span>
+                  <Input
+                    className="h-8 w-14"
+                    inputMode="numeric"
+                    value={cfg.inicio}
+                    onChange={(e) => setCfg({ inicio: e.target.value })}
+                    aria-label="Semana de início"
+                  />
+                  <Button size="sm" variant="outline" onClick={() => distribuirItem(c)}>
+                    <Wand2 /> Distribuir
+                  </Button>
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
 
       {pode && (
         <div className="flex flex-wrap items-center gap-2">
-          <Seletor className="w-auto" value={frequencia} onChange={(e) => setFrequencia(e.target.value as "1" | "2")}>
-            <option value="1">1x por semana</option>
-            <option value="2">2x por semana</option>
-          </Seletor>
-          <Button variant="outline" onClick={distribuir}>
-            <Wand2 /> Distribuir automaticamente
+          <Button variant="outline" onClick={distribuirTodos}>
+            <Wand2 /> Distribuir todos os itens
           </Button>
           <Button variant="outline" onClick={adicionarSemana}>
             <Plus /> Semana
