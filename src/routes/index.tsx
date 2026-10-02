@@ -25,7 +25,7 @@ export const Route = createFileRoute("/")({
   errorComponent: ({ error }) => (
     <div className="mx-auto max-w-2xl p-10">
       <h1 className="text-xl font-semibold">Não foi possível carregar o GitHub</h1>
-      <p className="mt-2 font-mono text-sm text-muted-foreground break-words">{error.message}</p>
+      <p className="mt-2 font-mono text-sm text-muted-foreground break-words">{(error as Error).message}</p>
     </div>
   ),
 });

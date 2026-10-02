@@ -52,7 +52,7 @@ export type GhEvent = {
   type: string;
   created_at: string;
   repo: { name: string };
-  payload: Record<string, any>;
+  payload: any;
 };
 export type GhCommit = {
   sha: string;
