@@ -155,6 +155,10 @@
   --primary-foreground: oklch(0.15 0.02 195);
   --ring: oklch(0.72 0.1 195);
 }
+/* Base menor (14px): letras e espaçamentos do Tailwind são em rem e diminuem juntos. */
+html {
+  font-size: 14px;
+}
 body {
   font-family: "Inter", system-ui, sans-serif;
 }
