@@ -19,7 +19,11 @@ export function usePlanos(patientId: string) {
     queryKey: ["plans", patientId],
     queryFn: async () =>
       check(
-        await supabase.from("plans").select("*").eq("patient_id", patientId).order("inicio", { ascending: false }),
+        await supabase
+          .from("plans")
+          .select("*")
+          .eq("patient_id", patientId)
+          .order("created_at", { ascending: false }),
       ) as Plan[],
   });
 }

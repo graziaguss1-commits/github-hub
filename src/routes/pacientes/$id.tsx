@@ -94,6 +94,7 @@ function PacienteDetalhe() {
               {planos.map((p) => (
                 <option key={p.id} value={p.id}>
                   Plano de {data(p.inicio)} · {STATUS_PLANO[p.status]}
+                  {p.observacoes?.startsWith("Gerado do orçamento") ? ` · ${p.observacoes.replace("Gerado do ", "")}` : ""}
                 </option>
               ))}
             </Seletor>
