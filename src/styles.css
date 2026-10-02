@@ -142,3 +142,30 @@
     color: var(--color-foreground);
   }
 }
+
+/* Painel GitHub — tema escuro "terminal" */
+:root {
+  --background: oklch(0.17 0.012 160);
+  --foreground: oklch(0.94 0.01 150);
+  --card: oklch(0.21 0.014 160);
+  --card-foreground: oklch(0.94 0.01 150);
+  --popover: oklch(0.21 0.014 160);
+  --popover-foreground: oklch(0.94 0.01 150);
+  --primary: oklch(0.82 0.17 145);
+  --primary-foreground: oklch(0.17 0.012 160);
+  --secondary: oklch(0.26 0.015 160);
+  --secondary-foreground: oklch(0.94 0.01 150);
+  --muted: oklch(0.25 0.012 160);
+  --muted-foreground: oklch(0.68 0.02 155);
+  --accent: oklch(0.8 0.14 75);
+  --accent-foreground: oklch(0.17 0.012 160);
+  --border: oklch(0.3 0.015 160);
+  --input: oklch(0.3 0.015 160);
+  --ring: oklch(0.82 0.17 145);
+}
+body {
+  font-family: "IBM Plex Sans", system-ui, sans-serif;
+  background: var(--background);
+  color: var(--foreground);
+}
+.font-mono, code { font-family: "JetBrains Mono", ui-monospace, monospace; }
