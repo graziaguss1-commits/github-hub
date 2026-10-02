@@ -26,7 +26,7 @@ export function useOrcamento(id: string) {
       const quote = check(await supabase.from("quotes").select("*").eq("id", id).single()) as Quote;
       const [paciente, itens, descontos, total] = await Promise.all([
         supabase.from("patients").select("*").eq("id", quote.patient_id).single(),
-        supabase.from("quote_items").select("*").eq("quote_id", id).order("created_at"),
+        supabase.from("quote_items").select("*").eq("quote_id", id).order("ordem").order("created_at"),
         supabase.from("v_orcamento_desconto").select("*").eq("quote_id", id).order("created_at"),
         supabase.from("v_orcamento").select("*").eq("quote_id", id).single(),
       ]);

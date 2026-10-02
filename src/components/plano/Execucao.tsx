@@ -1,5 +1,6 @@
 import { useMutation } from "@tanstack/react-query";
-import { Check, Pencil, SkipForward, Syringe, Undo2 } from "lucide-react";
+import { addDays, format, parseISO } from "date-fns";
+import { Check, CheckCircle2, Pencil, SkipForward, Syringe, Undo2 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
@@ -26,12 +27,14 @@ type Semana = {
 export function Execucao({ plano, dados }: { plano: Plan; dados: DadosPlano }) {
   const pode = usePode("admin", "medico", "enfermagem");
   const { data: procs = [] } = useProcedimentos();
+  const { data: produtos = [] } = useProdutos();
   const { data: perfis = [] } = usePerfis();
   const [realizar, setRealizar] = useState<Semana | null>(null);
   const [pular, setPular] = useState<Semana | null>(null);
   const [editar, setEditar] = useState<Semana | null>(null);
   const [cancelar, setCancelar] = useState<Application | null>(null);
 
+  // Semanas (com suas sub-semanas) em ordem.
   const semanas = useMemo(() => {
     const mapa = new Map<string, Semana>();
     const pegar = (semana: number, sub: number) => {
@@ -48,7 +51,11 @@ export function Execucao({ plano, dados }: { plano: Plan; dados: DadosPlano }) {
       if (a.status === "cancelada") continue;
       pegar(a.semana, a.sub_semana).app = a;
     }
-    return [...mapa.values()].sort((a, b) => a.semana - b.semana || a.sub - b.sub);
+    const porSemana = new Map<number, Semana[]>();
+    for (const s of mapa.values()) porSemana.set(s.semana, [...(porSemana.get(s.semana) ?? []), s]);
+    return [...porSemana.entries()]
+      .sort(([a], [b]) => a - b)
+      .map(([semana, subs]) => ({ semana, subs: subs.sort((a, b) => a.sub - b.sub) }));
   }, [dados]);
 
   const nomeCompra = (purchaseId: string) => {
@@ -57,97 +64,153 @@ export function Execucao({ plano, dados }: { plano: Plan; dados: DadosPlano }) {
   };
   const unidadeCompra = (purchaseId: string) => dados.compras.find((x) => x.id === purchaseId)?.unidade_dose;
   const nomePerfil = (id: string | null) => perfis.find((p) => p.id === id)?.nome ?? "—";
+  const nomeProduto = (id: string) => produtos.find((p) => p.id === id);
+
+  function situacao(s: Semana): "realizada" | "pulada" | "bloqueada" | "atrasada" | "a_realizar" {
+    if (s.app?.status === "concluida") return "realizada";
+    if (s.app?.status === "pulada") return "pulada";
+    if (plano.status !== "ativo") return "bloqueada";
+    const fim = addDays(inicioDaSemana(plano.inicio, s.semana), 6);
+    return (diasAte(format(fim, "yyyy-MM-dd")) ?? 0) < 0 ? "atrasada" : "a_realizar";
+  }
 
   if (semanas.length === 0) return <Vazio>Nenhuma semana prescrita ainda.</Vazio>;
 
   return (
-    <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-      {semanas.map((s) => {
-        const ini = inicioDaSemana(plano.inicio, s.semana);
-        const fimISO = new Date(ini.getTime() + 6 * 86400000).toISOString().slice(0, 10);
-        const realizada = s.app?.status === "concluida";
-        const pulada = s.app?.status === "pulada";
-        const atrasada = !s.app && plano.status === "ativo" && (diasAte(fimISO) ?? 0) < 0;
-        const bloqueada = !s.app && plano.status !== "ativo";
-        const itensApp = s.app ? dados.itens.filter((i) => i.application_id === s.app?.id) : [];
+    <div className="grid gap-4">
+      {semanas.map(({ semana, subs }) => {
+        const ini = inicioDaSemana(plano.inicio, semana);
+        const sits = subs.map(situacao);
+        const tudoFeito = sits.every((x) => x === "realizada" || x === "pulada");
+        const algumAtraso = sits.includes("atrasada");
+        const dividida = subs.length > 1;
 
         return (
-          <div key={chaveSemana(s.semana, s.sub)} className="flex flex-col rounded-lg border bg-card p-4">
-            <div className="mb-2 flex items-start justify-between gap-2">
-              <div>
-                <p className="font-medium">{rotuloSemana(s.semana, s.sub)}</p>
-                <p className="text-xs text-muted-foreground">
-                  {dataCurta(ini)} a {dataCurta(new Date(ini.getTime() + 6 * 86400000))}
-                </p>
+          <div key={semana} className="rounded-xl border bg-card p-5 shadow-sm">
+            <div className="flex gap-4">
+              <div
+                className={`flex size-9 shrink-0 items-center justify-center rounded-full text-sm font-medium ${
+                  tudoFeito
+                    ? "bg-emerald-700 text-white"
+                    : algumAtraso
+                      ? "bg-red-100 text-red-700"
+                      : "bg-muted text-muted-foreground"
+                }`}
+              >
+                {tudoFeito ? <CheckCircle2 className="size-5" /> : semana}
               </div>
-              {realizada ? (
-                <Etiqueta tom="ok">Realizada {data(s.app?.data_aplicacao)}</Etiqueta>
-              ) : pulada ? (
-                <Etiqueta tom="alerta">Pulada</Etiqueta>
-              ) : bloqueada ? (
-                <Etiqueta>Bloqueada</Etiqueta>
-              ) : atrasada ? (
-                <Etiqueta tom="perigo">Atrasada</Etiqueta>
-              ) : (
-                <Etiqueta tom="info">A realizar</Etiqueta>
-              )}
+
+              <div className="min-w-0 flex-1">
+                <div className="mb-2 flex flex-wrap items-center gap-2">
+                  <span className="font-semibold">Semana {semana}</span>
+                  <span className="text-muted-foreground">
+                    {dataCurta(ini)} a {dataCurta(addDays(ini, 6))}
+                  </span>
+                  {dividida && (
+                    <span className="rounded-full border border-sky-300 px-2 py-0.5 text-xs font-medium text-sky-700">
+                      Dividida em {subs.length} aplicações
+                    </span>
+                  )}
+                </div>
+
+                <div className={dividida ? "grid gap-3" : ""}>
+                  {subs.map((s, idx) => {
+                    const sit = sits[idx] ?? "a_realizar";
+                    const itensApp = s.app ? dados.itens.filter((i) => i.application_id === s.app?.id) : [];
+                    return (
+                      <div
+                        key={s.sub}
+                        className={dividida ? "flex flex-wrap items-start justify-between gap-3 rounded-lg bg-muted/40 p-3" : "flex flex-wrap items-start justify-between gap-3"}
+                      >
+                        <div className="min-w-0 flex-1 space-y-1">
+                          {dividida && (
+                            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                              {s.sub}ª aplicação
+                            </p>
+                          )}
+                          {sit === "realizada"
+                            ? itensApp.map((i) => {
+                                const consumos = dados.consumos.filter((c) => c.application_item_id === i.id);
+                                return (
+                                  <p key={i.id}>
+                                    <span className="font-semibold">{nomeCompra(i.purchase_id)}</span>
+                                    <span className="text-muted-foreground">
+                                      {" — "}
+                                      {consumos.length
+                                        ? consumos
+                                            .map((c) => {
+                                              const pr = nomeProduto(c.product_id);
+                                              return `${pr?.nome ?? ""} ${qtd(c.quantidade, pr?.unidade)}`;
+                                            })
+                                            .join(" + ")
+                                        : qtd(i.dose_real, i.unidade)}
+                                      {i.dose_real !== i.dose_prevista && ` (previsto ${qtd(i.dose_prevista, i.unidade)})`}
+                                    </span>
+                                  </p>
+                                );
+                              })
+                            : s.doses.map((d) => {
+                                const obs = dados.compras.find((c) => c.id === d.purchase_id)?.observacao;
+                                return (
+                                  <div key={d.id}>
+                                    <p>
+                                      <span className="font-semibold">{nomeCompra(d.purchase_id)}</span>
+                                      <span className="text-muted-foreground"> — {qtd(d.dose, unidadeCompra(d.purchase_id))}</span>
+                                    </p>
+                                    {obs && <p className="text-xs italic text-muted-foreground">{obs}</p>}
+                                  </div>
+                                );
+                              })}
+                          {sit === "realizada" && s.app && (
+                            <p className="text-sm text-emerald-700">
+                              Aplicada em {data(s.app.data_aplicacao)} · {format(parseISO(s.app.created_at), "HH:mm")} · por{" "}
+                              {nomePerfil(s.app.enfermeiro_id)}
+                            </p>
+                          )}
+                          {s.app?.observacoes && (
+                            <p className="text-sm italic text-muted-foreground">
+                              {sit === "pulada" ? "Motivo: " : ""}
+                              {s.app.observacoes}
+                            </p>
+                          )}
+
+                          {pode && (
+                            <div className="flex flex-wrap gap-2 pt-1">
+                              {(sit === "a_realizar" || sit === "atrasada") && s.doses.length > 0 && (
+                                <>
+                                  <Button size="sm" onClick={() => setRealizar(s)}>
+                                    <Syringe /> Realizar
+                                  </Button>
+                                  <Button size="sm" variant="outline" onClick={() => setPular(s)}>
+                                    <SkipForward /> Pular
+                                  </Button>
+                                </>
+                              )}
+                              {sit === "realizada" && (
+                                <>
+                                  <Button size="sm" variant="outline" onClick={() => setEditar(s)}>
+                                    <Pencil /> Editar
+                                  </Button>
+                                  <Button size="sm" variant="ghost" onClick={() => s.app && setCancelar(s.app)}>
+                                    <Undo2 /> Cancelar
+                                  </Button>
+                                </>
+                              )}
+                              {sit === "pulada" && (
+                                <Button size="sm" variant="ghost" onClick={() => s.app && setCancelar(s.app)}>
+                                  <Undo2 /> Desfazer
+                                </Button>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                        <StatusSemana sit={sit} />
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
-
-            <ul className="mb-3 flex-1 space-y-1 text-sm">
-              {realizada
-                ? itensApp.map((i) => (
-                    <li key={i.id} className="flex justify-between gap-2">
-                      <span>{nomeCompra(i.purchase_id)}</span>
-                      <span className={i.dose_real !== i.dose_prevista ? "font-medium text-amber-700" : ""}>
-                        {qtd(i.dose_real, i.unidade)}
-                        {i.dose_real !== i.dose_prevista && (
-                          <span className="text-xs text-muted-foreground"> (prev. {qtd(i.dose_prevista)})</span>
-                        )}
-                      </span>
-                    </li>
-                  ))
-                : s.doses.map((d) => (
-                    <li key={d.id} className="flex justify-between gap-2">
-                      <span>{nomeCompra(d.purchase_id)}</span>
-                      <span>{qtd(d.dose, unidadeCompra(d.purchase_id))}</span>
-                    </li>
-                  ))}
-              {pulada && <li className="text-muted-foreground">Motivo: {s.app?.observacoes}</li>}
-            </ul>
-
-            {realizada && (
-              <p className="mb-2 text-xs text-muted-foreground">Por {nomePerfil(s.app?.enfermeiro_id ?? null)}</p>
-            )}
-
-            {pode && (
-              <div className="flex flex-wrap gap-2">
-                {!s.app && !bloqueada && s.doses.length > 0 && (
-                  <>
-                    <Button size="sm" onClick={() => setRealizar(s)}>
-                      <Syringe /> Realizar
-                    </Button>
-                    <Button size="sm" variant="outline" onClick={() => setPular(s)}>
-                      <SkipForward /> Pular
-                    </Button>
-                  </>
-                )}
-                {realizada && (
-                  <>
-                    <Button size="sm" variant="outline" onClick={() => setEditar(s)}>
-                      <Pencil /> Editar
-                    </Button>
-                    <Button size="sm" variant="ghost" onClick={() => s.app && setCancelar(s.app)}>
-                      <Undo2 /> Cancelar
-                    </Button>
-                  </>
-                )}
-                {pulada && (
-                  <Button size="sm" variant="ghost" onClick={() => s.app && setCancelar(s.app)}>
-                    <Undo2 /> Desfazer
-                  </Button>
-                )}
-              </div>
-            )}
           </div>
         );
       })}
@@ -157,6 +220,22 @@ export function Execucao({ plano, dados }: { plano: Plan; dados: DadosPlano }) {
       {editar && <Editar dados={dados} semana={editar} nomeCompra={nomeCompra} fechar={() => setEditar(null)} />}
       {cancelar && <Cancelar app={cancelar} fechar={() => setCancelar(null)} />}
     </div>
+  );
+}
+
+function StatusSemana({ sit }: { sit: "realizada" | "pulada" | "bloqueada" | "atrasada" | "a_realizar" }) {
+  const cfg = {
+    realizada: { texto: "Realizada", cls: "border-emerald-200 bg-emerald-50 text-emerald-700" },
+    pulada: { texto: "Pulada", cls: "border-amber-200 bg-amber-50 text-amber-700" },
+    bloqueada: { texto: "Bloqueada", cls: "border-border bg-muted text-muted-foreground" },
+    atrasada: { texto: "Atrasada", cls: "border-red-200 bg-red-50 text-red-700" },
+    a_realizar: { texto: "A realizar", cls: "border-sky-200 bg-sky-50 text-sky-700" },
+  }[sit];
+  return (
+    <span className={`inline-flex shrink-0 items-center gap-1 rounded-full border px-3 py-1 text-sm font-medium ${cfg.cls}`}>
+      {sit === "realizada" && <CheckCircle2 className="size-4" />}
+      {cfg.texto}
+    </span>
   );
 }
 

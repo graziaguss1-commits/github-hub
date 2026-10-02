@@ -81,6 +81,7 @@ export type PlanPurchase = {
   unidade_dose: UnidadeDose;
   dose_padrao: number;
   contratado: number;
+  observacao: string | null;
 };
 
 export type PlanDose = {
@@ -92,6 +93,7 @@ export type PlanDose = {
   dose: number;
   status: "prevista" | "realizada";
   observacao: string | null;
+  created_at: string;
 };
 
 export type Application = {
@@ -104,6 +106,7 @@ export type Application = {
   enfermeiro_id: string | null;
   observacoes: string | null;
   cancelamento_motivo: string | null;
+  created_at: string;
 };
 
 export type ApplicationItem = {
@@ -174,6 +177,11 @@ export type Quote = {
   plan_id: string | null;
   aprovado_em: string | null;
   created_at: string;
+  mes_tratamento: string | null;
+  frequencia_aplicacoes: string | null;
+  condicao_pagamento: string | null;
+  acrescimo_tipo: "reais" | "percentual";
+  acrescimo_valor: number;
 };
 
 export type QuoteItem = {
@@ -188,6 +196,9 @@ export type QuoteItem = {
   preco_unitario: number;
   subtotal: number;
   created_at: string;
+  observacao: string | null;
+  ordem: number;
+  cortesia: boolean;
 };
 
 export type QuoteDiscount = {
@@ -203,9 +214,13 @@ export type OrcamentoTotal = {
   quote_id: string;
   numero: number;
   patient_id: string;
+  medico_id: string | null;
   status: QuoteStatus;
   created_at: string;
+  plan_id: string | null;
   subtotal: number;
   desconto: number;
+  acrescimo: number;
   total: number;
+  falta_prescrever: boolean;
 };

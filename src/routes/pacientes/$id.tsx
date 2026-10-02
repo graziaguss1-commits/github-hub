@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { ArrowLeft, Plus, Receipt } from "lucide-react";
+import { addDays, format } from "date-fns";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
@@ -10,14 +11,13 @@ import { STATUS_ORCAMENTO, useOrcamentosDoPaciente } from "@/components/orcament
 import { Compras } from "@/components/plano/Compras";
 import { useDadosPlano, usePlanos, useRecarregarPlano } from "@/components/plano/dados";
 import { Execucao } from "@/components/plano/Execucao";
-import { Prescricao } from "@/components/plano/Prescricao";
+import { PrescricaoComResumo } from "@/components/plano/PrescricaoComResumo";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { usePode } from "@/lib/auth";
-import { brl, data, hojeISO } from "@/lib/format";
+import { brl, data, hojeISO, inicioDaSemana } from "@/lib/format";
 import { usePerfis } from "@/lib/queries";
 import { check, supabase } from "@/lib/supabase";
 import type { Patient, Plan, ProgressoPlano } from "@/lib/types";
@@ -59,8 +59,6 @@ function PacienteDetalhe() {
   const prog = progresso.find((p) => p.plan_id === planoId);
   const { data: dados } = useDadosPlano(planoId);
 
-  // Recria o editor de prescrição só quando as doses gravadas mudam (não a cada nova leitura).
-  const versaoDoses = dados?.doses.map((d) => `${d.id}:${d.semana}:${d.sub_semana}:${d.dose}:${d.status}`).join("|");
 
   return (
     <AppShell
@@ -83,73 +81,55 @@ function PacienteDetalhe() {
     >
       {paciente?.telefone && <p className="mb-4 text-sm text-muted-foreground">Telefone: {paciente.telefone}</p>}
 
-      <OrcamentosDoPaciente patientId={id} />
+      <Tabs defaultValue="cronograma">
+        <TabsList className="mb-6 h-auto flex-wrap rounded-xl p-1">
+          <TabsTrigger value="cronograma" className="px-4 py-2">Cronograma</TabsTrigger>
+          <TabsTrigger value="prescricao" className="px-4 py-2">Prescrição</TabsTrigger>
+          <TabsTrigger value="compras" className="px-4 py-2">Comprado e saldo</TabsTrigger>
+          <TabsTrigger value="orcamentos" className="px-4 py-2">Orçamentos</TabsTrigger>
+        </TabsList>
 
-      {planos.length === 0 ? (
-        <Vazio>Ainda não tem plano de tratamento. Crie um orçamento e aprove para gerar o plano.</Vazio>
-      ) : (
-        <>
-          <div className="mb-6 flex flex-wrap items-center gap-3">
-            <Seletor className="w-auto" value={planoId ?? ""} onChange={(e) => setPlanoId(e.target.value)}>
-              {planos.map((p) => (
-                <option key={p.id} value={p.id}>
-                  Plano de {data(p.inicio)} · {STATUS_PLANO[p.status]}
-                  {p.observacoes?.startsWith("Gerado do orçamento") ? ` · ${p.observacoes.replace("Gerado do ", "")}` : ""}
-                </option>
-              ))}
-            </Seletor>
-            {plano && (
-              <>
-                <Etiqueta tom={plano.status === "ativo" ? "ok" : "neutro"}>{STATUS_PLANO[plano.status]}</Etiqueta>
-                <span className="text-sm text-muted-foreground">
-                  Médico(a): {perfis.find((p) => p.id === plano.medico_id)?.nome ?? "—"}
-                </span>
-                <Button size="sm" variant="outline" asChild>
-                  <a href={`/imprimir-plano/${plano.id}`} target="_blank" rel="noreferrer">
-                    Imprimir plano
-                  </a>
-                </Button>
-                {podePlano && <StatusPlano plano={plano} />}
-              </>
-            )}
-          </div>
+        <TabsContent value="orcamentos">
+          <OrcamentosDoPaciente patientId={id} />
+        </TabsContent>
 
-          {prog && prog.semanas_previstas > 0 && (
-            <div className="mb-6 max-w-md">
-              <div className="mb-1 flex justify-between text-sm">
-                <span>Progresso</span>
-                <span className="text-muted-foreground">
-                  {prog.semanas_realizadas} de {prog.semanas_previstas} semanas
-                  {prog.semanas_puladas > 0 && ` · ${prog.semanas_puladas} pulada(s)`}
-                </span>
-              </div>
-              <Progress value={(100 * prog.semanas_realizadas) / prog.semanas_previstas} />
-              {plano?.status === "ativo" && prog.proxima_semana === null && (
-                <p className="mt-2 text-sm text-amber-700">Tratamento concluído: falta encerrar ou renovar.</p>
+        {planos.length === 0 ? (
+          <>
+            {["cronograma", "prescricao", "compras"].map((v) => (
+              <TabsContent key={v} value={v}>
+                <Vazio>Ainda não tem plano de tratamento. Crie um orçamento e aprove para gerar o plano.</Vazio>
+              </TabsContent>
+            ))}
+          </>
+        ) : (
+          plano && (
+            <>
+              <CabecalhoPlano
+                plano={plano}
+                planos={planos}
+                setPlanoId={setPlanoId}
+                prog={prog}
+                ultimaSemana={dados ? Math.max(1, ...dados.doses.map((d) => d.semana)) : 1}
+                medico={perfis.find((p) => p.id === plano.medico_id)?.nome}
+                podePlano={podePlano}
+              />
+              {dados && (
+                <>
+                  <TabsContent value="cronograma">
+                    <Execucao plano={plano} dados={dados} />
+                  </TabsContent>
+                  <TabsContent value="prescricao">
+                    <PrescricaoComResumo plano={plano} dados={dados} />
+                  </TabsContent>
+                  <TabsContent value="compras">
+                    <Compras plano={plano} dados={dados} />
+                  </TabsContent>
+                </>
               )}
-            </div>
-          )}
-
-          {plano && dados && (
-            <Tabs defaultValue="execucao">
-              <TabsList>
-                <TabsTrigger value="execucao">Aplicações</TabsTrigger>
-                <TabsTrigger value="prescricao">Prescrição</TabsTrigger>
-                <TabsTrigger value="compras">Comprado e saldo</TabsTrigger>
-              </TabsList>
-              <TabsContent value="execucao" className="mt-4">
-                <Execucao plano={plano} dados={dados} />
-              </TabsContent>
-              <TabsContent value="prescricao" className="mt-4">
-                <Prescricao key={`${plano.id}:${versaoDoses}`} plano={plano} dados={dados} />
-              </TabsContent>
-              <TabsContent value="compras" className="mt-4">
-                <Compras plano={plano} dados={dados} />
-              </TabsContent>
-            </Tabs>
-          )}
-        </>
-      )}
+            </>
+          )
+        )}
+      </Tabs>
 
       {novoPlano && (
         <NovoPlano
@@ -161,6 +141,112 @@ function PacienteDetalhe() {
         />
       )}
     </AppShell>
+  );
+}
+
+function CabecalhoPlano({
+  plano,
+  planos,
+  setPlanoId,
+  prog,
+  ultimaSemana,
+  medico,
+  podePlano,
+}: {
+  plano: Plan;
+  planos: Plan[];
+  setPlanoId: (id: string) => void;
+  prog: ProgressoPlano | undefined;
+  ultimaSemana: number;
+  medico: string | undefined;
+  podePlano: boolean;
+}) {
+  const { data: quote } = useQuery({
+    queryKey: ["quote-do-plano", plano.id],
+    queryFn: async () =>
+      check(await supabase.from("quotes").select("id, numero").eq("plan_id", plano.id).maybeSingle()) as
+        | { id: string; numero: number }
+        | null,
+  });
+  const fim = format(addDays(inicioDaSemana(plano.inicio, ultimaSemana), 6), "yyyy-MM-dd");
+  const previstas = prog?.semanas_previstas ?? 0;
+  const realizadas = prog?.semanas_realizadas ?? 0;
+  const puladas = prog?.semanas_puladas ?? 0;
+  const pct = previstas ? (100 * realizadas) / previstas : 0;
+
+  return (
+    <div className="mb-6 grid gap-4">
+      <div className="flex flex-wrap items-center gap-3">
+        {planos.length > 1 ? (
+          <Seletor className="w-auto" value={plano.id} onChange={(e) => setPlanoId(e.target.value)}>
+            {planos.map((p) => (
+              <option key={p.id} value={p.id}>
+                Tratamento {data(p.inicio)} · {STATUS_PLANO[p.status]}
+              </option>
+            ))}
+          </Seletor>
+        ) : (
+          <span className="text-muted-foreground">
+            Tratamento {data(plano.inicio)} — {data(fim)}
+          </span>
+        )}
+        {quote && (
+          <Link
+            to="/orcamentos/$id"
+            params={{ id: quote.id }}
+            className="rounded-full border px-3 py-1 text-sm font-semibold hover:bg-muted"
+          >
+            Orçamento #{quote.numero}
+          </Link>
+        )}
+        {plano.status !== "ativo" && <Etiqueta>{STATUS_PLANO[plano.status]}</Etiqueta>}
+        {medico && <span className="text-sm text-muted-foreground">Médico(a): {medico}</span>}
+        <div className="ml-auto">{podePlano && <StatusPlano plano={plano} />}</div>
+      </div>
+
+      <div className="rounded-2xl bg-slate-900 p-6 text-white shadow-sm dark:bg-slate-950">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Progresso do tratamento</p>
+            <p className="mt-1 text-2xl font-semibold">
+              {realizadas} de {previstas} semanas realizadas
+            </p>
+          </div>
+          <a
+            href={`/imprimir-plano/${plano.id}`}
+            target="_blank"
+            rel="noreferrer"
+            className="rounded-full bg-white/10 px-4 py-2 text-sm font-medium hover:bg-white/20"
+          >
+            Plano em PDF
+          </a>
+        </div>
+        <div className="mt-5 h-2 rounded-full bg-white/10">
+          <div className="h-2 rounded-full bg-emerald-400" style={{ width: `${pct}%` }} />
+        </div>
+        <div className="mt-2 flex justify-between font-mono text-xs uppercase tracking-wider text-slate-400">
+          <span>Início {data(plano.inicio)}</span>
+          <span>Fim previsto {data(fim)}</span>
+        </div>
+        <div className="mt-5 grid gap-3 sm:grid-cols-3">
+          <Numero valor={realizadas} rotulo="realizadas" />
+          <Numero valor={puladas} rotulo="puladas" destaque="text-amber-300" />
+          <Numero valor={Math.max(0, previstas - realizadas)} rotulo="a realizar" />
+        </div>
+        {plano.status === "ativo" && previstas > 0 && prog?.proxima_semana === null && (
+          <p className="mt-4 text-sm text-amber-300">Tratamento concluído: falta encerrar ou renovar.</p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function Numero({ valor, rotulo, destaque }: { valor: number; rotulo: string; destaque?: string }) {
+  return (
+    <div className="rounded-xl bg-white/5 px-5 py-4">
+      <p className={`text-3xl font-semibold ${destaque ?? ""}`}>{valor}</p>
+      <p className="text-sm text-slate-400">{rotulo}</p>
+    </div>
   );
 }
 
@@ -182,10 +268,9 @@ function NovoOrcamentoBotao({ patientId }: { patientId: string }) {
 
 function OrcamentosDoPaciente({ patientId }: { patientId: string }) {
   const { data: orcamentos = [] } = useOrcamentosDoPaciente(patientId);
-  if (orcamentos.length === 0) return null;
+  if (orcamentos.length === 0) return <Vazio>Nenhum orçamento para este paciente.</Vazio>;
   return (
-    <section className="mb-8">
-      <h2 className="mb-2 font-medium">Orçamentos</h2>
+    <section>
       <ul className="divide-y rounded-lg border">
         {orcamentos.map((o) => (
           <li key={o.quote_id}>
