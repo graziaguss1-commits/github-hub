@@ -5,6 +5,7 @@ import {
   LayoutDashboard,
   LogOut,
   Package,
+  Receipt,
   Syringe,
   Users,
   UserCog,
@@ -18,6 +19,7 @@ import { bancoConfigurado, supabase } from "@/lib/supabase";
 const NAV = [
   { to: "/", label: "Início", icon: LayoutDashboard },
   { to: "/pacientes", label: "Pacientes", icon: Users },
+  { to: "/orcamentos", label: "Orçamentos", icon: Receipt },
   { to: "/estoque", label: "Estoque", icon: Boxes },
   { to: "/produtos", label: "Produtos", icon: Package },
   { to: "/procedimentos", label: "Procedimentos", icon: ClipboardList },

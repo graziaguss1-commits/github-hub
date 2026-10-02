@@ -1,11 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowLeft, Plus } from "lucide-react";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { ArrowLeft, Plus, Receipt } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 import { AppShell } from "@/components/app/AppShell";
 import { Campo, Etiqueta, Seletor, Vazio } from "@/components/app/campos";
+import { STATUS_ORCAMENTO, useOrcamentosDoPaciente } from "@/components/orcamento/dados";
 import { Compras } from "@/components/plano/Compras";
 import { useDadosPlano, usePlanos, useRecarregarPlano } from "@/components/plano/dados";
 import { Execucao } from "@/components/plano/Execucao";
@@ -16,7 +17,7 @@ import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { usePode } from "@/lib/auth";
-import { data, hojeISO } from "@/lib/format";
+import { brl, data, hojeISO } from "@/lib/format";
 import { usePerfis } from "@/lib/queries";
 import { check, supabase } from "@/lib/supabase";
 import type { Patient, Plan, ProgressoPlano } from "@/lib/types";
@@ -71,9 +72,10 @@ function PacienteDetalhe() {
               <ArrowLeft /> Pacientes
             </Link>
           </Button>
+          <NovoOrcamentoBotao patientId={id} />
           {podePlano && (
-            <Button onClick={() => setNovoPlano(true)}>
-              <Plus /> Novo plano
+            <Button variant="outline" onClick={() => setNovoPlano(true)}>
+              <Plus /> Plano sem orçamento
             </Button>
           )}
         </>
@@ -81,8 +83,10 @@ function PacienteDetalhe() {
     >
       {paciente?.telefone && <p className="mb-4 text-sm text-muted-foreground">Telefone: {paciente.telefone}</p>}
 
+      <OrcamentosDoPaciente patientId={id} />
+
       {planos.length === 0 ? (
-        <Vazio>Este paciente ainda não tem plano de tratamento.</Vazio>
+        <Vazio>Ainda não tem plano de tratamento. Crie um orçamento e aprove para gerar o plano.</Vazio>
       ) : (
         <>
           <div className="mb-6 flex flex-wrap items-center gap-3">
@@ -151,6 +155,48 @@ function PacienteDetalhe() {
         />
       )}
     </AppShell>
+  );
+}
+
+function NovoOrcamentoBotao({ patientId }: { patientId: string }) {
+  const navigate = useNavigate();
+  const criar = useMutation({
+    mutationFn: async () =>
+      (check(await supabase.from("quotes").insert({ patient_id: patientId }).select("id").single()) as { id: string })
+        .id,
+    onSuccess: (quoteId) => void navigate({ to: "/orcamentos/$id", params: { id: quoteId } }),
+    onError: (e) => toast.error(e.message),
+  });
+  return (
+    <Button onClick={() => criar.mutate()} disabled={criar.isPending}>
+      <Receipt /> Novo orçamento
+    </Button>
+  );
+}
+
+function OrcamentosDoPaciente({ patientId }: { patientId: string }) {
+  const { data: orcamentos = [] } = useOrcamentosDoPaciente(patientId);
+  if (orcamentos.length === 0) return null;
+  return (
+    <section className="mb-8">
+      <h2 className="mb-2 font-medium">Orçamentos</h2>
+      <ul className="divide-y rounded-lg border">
+        {orcamentos.map((o) => (
+          <li key={o.quote_id}>
+            <Link
+              to="/orcamentos/$id"
+              params={{ id: o.quote_id }}
+              className="flex items-center justify-between gap-3 px-4 py-2 text-sm hover:bg-muted/50"
+            >
+              <span className="font-medium">Nº {o.numero}</span>
+              <span className="text-muted-foreground">{data(o.created_at.slice(0, 10))}</span>
+              <Etiqueta tom={STATUS_ORCAMENTO[o.status].tom}>{STATUS_ORCAMENTO[o.status].label}</Etiqueta>
+              <span className="ml-auto">{brl(o.total)}</span>
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }
 

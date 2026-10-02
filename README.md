@@ -6,8 +6,9 @@ a prescrição por semanas, a aplicação feita pela enfermagem e a baixa do est
 Projeto no Lovable: https://lovable.dev/projects/9cec097d-16ea-4ae1-9948-7e39468df4c5
 O código é editado por este repositório; cada push na `main` sincroniza com o Lovable.
 
-## Fase 1 (o que existe)
+## O que existe
 
+- Orçamentos: itens com preço, descontos com motivo (R$ ou %), impressão/PDF; aprovar gera o plano
 - Cadastros: produtos (unidade de estoque única), procedimentos (código PROC-0001) e composição
 - Estoque: entrada de lote, ajuste com motivo, saldo por produto, alertas de mínimo e vencimento
 - Plano do paciente: itens comprados, prescrição por semanas (chips, distribuição automática, arrastar)
@@ -16,8 +17,8 @@ O código é editado por este repositório; cada push na `main` sincroniza com o
 - Saldo (contratado x prescrito x aplicado) e progresso calculados por visões no banco
 - Equipe: primeiro usuário vira admin; os demais entram bloqueados até o admin liberar
 
-Fora da fase 1: orçamento com pagamentos, nota fiscal, descontos, cashback, recibo, importação por
-Excel, acompanhamento e encerramento com saldo importado para novo orçamento.
+Ainda fora: pagamentos, nota fiscal, cashback, recibo, importação por Excel, acompanhamento e
+encerramento com saldo importado para novo orçamento.
 
 ## Banco de dados
 
@@ -31,6 +32,7 @@ ligado pelo `.env`. Não usa o Lovable Cloud. Tudo está em `supabase/migrations
 | `editar_dose_aplicacao` | Exige senha; ajusta o lote pela diferença |
 | `cancelar_aplicacao` | Exige senha; devolve ao lote (estorno) ou desfaz a semana pulada |
 | `salvar_prescricao` | Regrava doses previstas; trava semanas feitas; bloqueia o que excede o contratado |
+| `aprovar_orcamento` | Cria o plano e os itens comprados a partir do orçamento; trava o orçamento |
 | `entrada_lote` / `ajustar_lote` | Entrada e ajuste de estoque com movimento e auditoria |
 
 Toda ação sensível grava em `audit_log` quem fez, quando e o motivo.

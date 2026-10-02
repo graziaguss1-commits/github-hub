@@ -159,3 +159,51 @@ export type EstoqueProduto = {
   proxima_validade: string | null;
   abaixo_minimo: boolean;
 };
+
+export type QuoteStatus = "rascunho" | "enviado" | "aprovado" | "perdido" | "cancelado";
+
+export type Quote = {
+  id: string;
+  numero: number;
+  patient_id: string;
+  medico_id: string | null;
+  status: QuoteStatus;
+  observacoes: string | null;
+  plan_id: string | null;
+  aprovado_em: string | null;
+  created_at: string;
+};
+
+export type QuoteItem = {
+  id: string;
+  quote_id: string;
+  procedure_id: string;
+  descricao: string;
+  vendido_por: "aplicacao" | "unidade";
+  quantidade: number;
+  unidade_dose: UnidadeDose;
+  dose_padrao: number;
+  preco_unitario: number;
+  subtotal: number;
+  created_at: string;
+};
+
+export type QuoteDiscount = {
+  id: string;
+  quote_id: string;
+  motivo: string;
+  tipo: "reais" | "percentual";
+  valor: number;
+  valor_reais: number;
+};
+
+export type OrcamentoTotal = {
+  quote_id: string;
+  numero: number;
+  patient_id: string;
+  status: QuoteStatus;
+  created_at: string;
+  subtotal: number;
+  desconto: number;
+  total: number;
+};

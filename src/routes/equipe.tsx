@@ -8,6 +8,7 @@ import { Campo, Etiqueta, Seletor } from "@/components/app/campos";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { PAPEL_LABEL, useAuth, usePode } from "@/lib/auth";
 import { usePerfis } from "@/lib/queries";
@@ -91,7 +92,12 @@ function Equipe() {
         </Table>
       </div>
 
-      {admin && <SenhaEdicao />}
+      {admin && (
+        <div className="grid gap-6 lg:grid-cols-2">
+          <SenhaEdicao />
+          <DadosClinica />
+        </div>
+      )}
     </AppShell>
   );
 }
@@ -140,6 +146,56 @@ function SenhaEdicao() {
         </Campo>
         <Button type="submit" disabled={!senha || salvar.isPending}>
           Salvar senha
+        </Button>
+      </form>
+    </div>
+  );
+}
+
+function DadosClinica() {
+  const qc = useQueryClient();
+  const { data } = useQuery({
+    queryKey: ["dados_clinica"],
+    queryFn: async () =>
+      ((check(await supabase.rpc("dados_clinica")) as { clinica_nome: string | null; clinica_rodape: string | null }[])[0] ??
+        null),
+  });
+  const [nome, setNome] = useState<string | null>(null);
+  const [rodape, setRodape] = useState<string | null>(null);
+  const nomeAtual = nome ?? data?.clinica_nome ?? "";
+  const rodapeAtual = rodape ?? data?.clinica_rodape ?? "";
+
+  const salvar = useMutation({
+    mutationFn: async () =>
+      check(await supabase.rpc("definir_dados_clinica", { p_nome: nomeAtual, p_rodape: rodapeAtual })),
+    onSuccess: () => {
+      toast.success("Dados do orçamento impresso salvos.");
+      void qc.invalidateQueries({ queryKey: ["dados_clinica"] });
+    },
+    onError: (e) => toast.error(e.message),
+  });
+
+  return (
+    <div className="max-w-md rounded-lg border p-4">
+      <h2 className="font-medium">Orçamento impresso</h2>
+      <p className="mb-4 mt-1 text-sm text-muted-foreground">
+        Nome no cabeçalho e texto do rodapé (endereço, telefone, validade do orçamento). Fica em branco se não preencher.
+      </p>
+      <form
+        className="grid gap-3"
+        onSubmit={(e) => {
+          e.preventDefault();
+          salvar.mutate();
+        }}
+      >
+        <Campo label="Nome da clínica">
+          <Input value={nomeAtual} onChange={(e) => setNome(e.target.value)} />
+        </Campo>
+        <Campo label="Rodapé">
+          <Textarea rows={3} value={rodapeAtual} onChange={(e) => setRodape(e.target.value)} />
+        </Campo>
+        <Button type="submit" disabled={salvar.isPending}>
+          Salvar
         </Button>
       </form>
     </div>

@@ -17,6 +17,9 @@ import { Route as EstoqueRouteImport } from './routes/estoque'
 import { Route as EquipeRouteImport } from './routes/equipe'
 import { Route as PacientesIndexRouteImport } from './routes/pacientes/index'
 import { Route as PacientesIdRouteImport } from './routes/pacientes/$id'
+import { Route as OrcamentosIndexRouteImport } from './routes/orcamentos/index'
+import { Route as OrcamentosIdRouteImport } from './routes/orcamentos/$id'
+import { Route as ImprimirOrcamentoIdRouteImport } from './routes/imprimir-orcamento/$id'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -58,6 +61,21 @@ const PacientesIdRoute = PacientesIdRouteImport.update({
   path: '/pacientes/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
+const OrcamentosIndexRoute = OrcamentosIndexRouteImport.update({
+  id: '/orcamentos/',
+  path: '/orcamentos/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OrcamentosIdRoute = OrcamentosIdRouteImport.update({
+  id: '/orcamentos/$id',
+  path: '/orcamentos/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ImprimirOrcamentoIdRoute = ImprimirOrcamentoIdRouteImport.update({
+  id: '/imprimir-orcamento/$id',
+  path: '/imprimir-orcamento/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -68,6 +86,9 @@ export interface FileRoutesByFullPath {
   '/equipe': typeof EquipeRoute
   '/pacientes/': typeof PacientesIndexRoute
   '/pacientes/$id': typeof PacientesIdRoute
+  '/orcamentos/': typeof OrcamentosIndexRoute
+  '/orcamentos/$id': typeof OrcamentosIdRoute
+  '/imprimir-orcamento/$id': typeof ImprimirOrcamentoIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -78,6 +99,9 @@ export interface FileRoutesByTo {
   '/equipe': typeof EquipeRoute
   '/pacientes': typeof PacientesIndexRoute
   '/pacientes/$id': typeof PacientesIdRoute
+  '/orcamentos': typeof OrcamentosIndexRoute
+  '/orcamentos/$id': typeof OrcamentosIdRoute
+  '/imprimir-orcamento/$id': typeof ImprimirOrcamentoIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -89,6 +113,9 @@ export interface FileRoutesById {
   '/equipe': typeof EquipeRoute
   '/pacientes/': typeof PacientesIndexRoute
   '/pacientes/$id': typeof PacientesIdRoute
+  '/orcamentos/': typeof OrcamentosIndexRoute
+  '/orcamentos/$id': typeof OrcamentosIdRoute
+  '/imprimir-orcamento/$id': typeof ImprimirOrcamentoIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -101,6 +128,9 @@ export interface FileRouteTypes {
     | '/equipe'
     | '/pacientes/'
     | '/pacientes/$id'
+    | '/orcamentos/'
+    | '/orcamentos/$id'
+    | '/imprimir-orcamento/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -111,6 +141,9 @@ export interface FileRouteTypes {
     | '/equipe'
     | '/pacientes'
     | '/pacientes/$id'
+    | '/orcamentos'
+    | '/orcamentos/$id'
+    | '/imprimir-orcamento/$id'
   id:
     | '__root__'
     | '/'
@@ -121,6 +154,9 @@ export interface FileRouteTypes {
     | '/equipe'
     | '/pacientes/'
     | '/pacientes/$id'
+    | '/orcamentos/'
+    | '/orcamentos/$id'
+    | '/imprimir-orcamento/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -132,6 +168,9 @@ export interface RootRouteChildren {
   EquipeRoute: typeof EquipeRoute
   PacientesIndexRoute: typeof PacientesIndexRoute
   PacientesIdRoute: typeof PacientesIdRoute
+  OrcamentosIndexRoute: typeof OrcamentosIndexRoute
+  OrcamentosIdRoute: typeof OrcamentosIdRoute
+  ImprimirOrcamentoIdRoute: typeof ImprimirOrcamentoIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -192,6 +231,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PacientesIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/orcamentos/': {
+      id: '/orcamentos/'
+      path: '/orcamentos/'
+      fullPath: '/orcamentos/'
+      preLoaderRoute: typeof OrcamentosIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/orcamentos/$id': {
+      id: '/orcamentos/$id'
+      path: '/orcamentos/$id'
+      fullPath: '/orcamentos/$id'
+      preLoaderRoute: typeof OrcamentosIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/imprimir-orcamento/$id': {
+      id: '/imprimir-orcamento/$id'
+      path: '/imprimir-orcamento/$id'
+      fullPath: '/imprimir-orcamento/$id'
+      preLoaderRoute: typeof ImprimirOrcamentoIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -204,6 +264,9 @@ const rootRouteChildren: RootRouteChildren = {
   EquipeRoute: EquipeRoute,
   PacientesIndexRoute: PacientesIndexRoute,
   PacientesIdRoute: PacientesIdRoute,
+  OrcamentosIndexRoute: OrcamentosIndexRoute,
+  OrcamentosIdRoute: OrcamentosIdRoute,
+  ImprimirOrcamentoIdRoute: ImprimirOrcamentoIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
