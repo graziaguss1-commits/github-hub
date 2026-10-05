@@ -1,4 +1,4 @@
-// Convida um usuário por e-mail (só admin). A pessoa recebe o link, cria a senha e já entra liberada
+// Convida (ou reenvia o convite a) um usuário por e-mail (só admin). A pessoa recebe o link, cria a senha e já entra liberada
 // com o papel escolhido. Usa a chave de serviço, que existe só no servidor do Supabase.
 import { createClient } from "npm:@supabase/supabase-js@2";
 
@@ -29,10 +29,48 @@ Deno.serve(async (req) => {
   if (!perfil?.ativo || perfil.papel !== "admin") return resposta({ erro: "Só o admin pode convidar usuários." }, 403);
 
   const corpo = await req.json().catch(() => ({}));
+  const redirect = typeof corpo.redirectTo === "string" ? corpo.redirectTo : undefined;
+
+  // Reenviar: convite de novo para quem nunca entrou; senão, link para criar nova senha.
+  if (corpo.acao === "reenviar") {
+    const { data: alvo, error: erroAlvo } = await servico.auth.admin.getUserById(String(corpo.user_id ?? ""));
+    if (erroAlvo || !alvo?.user?.email) return resposta({ erro: "Usuário não encontrado." }, 404);
+    const emailAlvo = alvo.user.email;
+    let enviado = false;
+    if (!alvo.user.last_sign_in_at) {
+      const { error } = await servico.auth.admin.inviteUserByEmail(emailAlvo, {
+        data: alvo.user.user_metadata ?? {},
+        ...(redirect ? { redirectTo: redirect } : {}),
+      });
+      enviado = !error;
+      if (error && /rate|limit/i.test(error.message)) {
+        return resposta({ erro: "Limite de e-mails do plano grátis atingido. Tente de novo em uma hora." }, 429);
+      }
+    }
+    if (!enviado) {
+      const anon = createClient(url, Deno.env.get("SUPABASE_ANON_KEY")!, { auth: { persistSession: false } });
+      const { error } = await anon.auth.resetPasswordForEmail(emailAlvo, redirect ? { redirectTo: redirect } : {});
+      if (error) {
+        const msg = /rate|limit|seconds/i.test(error.message)
+          ? "Limite de e-mails atingido. Espere alguns minutos e tente de novo."
+          : error.message;
+        return resposta({ erro: msg }, 400);
+      }
+    }
+    await servico.from("audit_log").insert({
+      acao: "reenviar_convite",
+      tabela: "profiles",
+      registro_id: alvo.user.id,
+      dados: { email: emailAlvo },
+      user_id: quem.user.id,
+    });
+    return resposta({ ok: true, email: emailAlvo });
+  }
+
   const email = String(corpo.email ?? "").trim().toLowerCase();
   const nome = String(corpo.nome ?? "").trim();
   const papel = String(corpo.papel ?? "enfermagem");
-  const redirectTo = typeof corpo.redirectTo === "string" ? corpo.redirectTo : undefined;
+  const redirectTo = redirect;
   if (!email.includes("@")) return resposta({ erro: "E-mail inválido." }, 400);
   if (!nome) return resposta({ erro: "Informe o nome." }, 400);
   if (!["admin", "medico", "enfermagem"].includes(papel)) return resposta({ erro: "Papel inválido." }, 400);

@@ -27,6 +27,11 @@ function Equipe() {
   const { perfil: eu } = useAuth();
   const qc = useQueryClient();
   const { data: perfis = [] } = usePerfis();
+  const { data: acessos = [] } = useQuery({
+    queryKey: ["status_acessos"],
+    enabled: admin,
+    queryFn: async () => check(await supabase.rpc("status_acessos")) as StatusAcesso[],
+  });
 
   const atualizar = useMutation({
     mutationFn: async ({ id, ...mudanca }: Partial<Profile> & { id: string }) =>
@@ -54,6 +59,7 @@ function Equipe() {
               <TableHead>E-mail</TableHead>
               <TableHead>Papel</TableHead>
               <TableHead>Acesso</TableHead>
+              {admin && <TableHead>Convite</TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -118,6 +124,11 @@ function Equipe() {
                     <Etiqueta tom={p.ativo ? "ok" : "alerta"}>{p.ativo ? "Liberado" : "Bloqueado"}</Etiqueta>
                   )}
                 </TableCell>
+                {admin && (
+                  <TableCell>
+                    <SituacaoConvite perfil={p} status={acessos.find((a) => a.id === p.id)} eu={p.id === eu?.id} />
+                  </TableCell>
+                )}
               </TableRow>
             ))}
           </TableBody>
@@ -131,6 +142,51 @@ function Equipe() {
         </div>
       )}
     </AppShell>
+  );
+}
+
+type StatusAcesso = { id: string; confirmado: boolean; ultimo_acesso: string | null; convidado_em: string | null };
+
+/** Chama a função do servidor e devolve a mensagem de erro em português, se houver. */
+async function chamarConvite(body: Record<string, unknown>) {
+  const { data, error } = await supabase.functions.invoke("convidar-usuario", {
+    body: { ...body, redirectTo: `${window.location.origin}/definir-senha` },
+  });
+  if (error) {
+    const corpo = await (error as { context?: Response }).context?.json?.().catch(() => null);
+    throw new Error(corpo?.erro ?? error.message);
+  }
+  if (data?.erro) throw new Error(data.erro);
+  return data as { ok: true; email?: string };
+}
+
+function SituacaoConvite({ perfil, status, eu }: { perfil: Profile; status: StatusAcesso | undefined; eu: boolean }) {
+  const qc = useQueryClient();
+  const reenviar = useMutation({
+    mutationFn: () => chamarConvite({ acao: "reenviar", user_id: perfil.id }),
+    onSuccess: (r) => {
+      toast.success(`E-mail reenviado para ${r.email ?? perfil.email ?? perfil.nome}.`);
+      void qc.invalidateQueries({ queryKey: ["status_acessos"] });
+    },
+    onError: (e) => toast.error(e.message),
+  });
+
+  const pendente = status && !status.ultimo_acesso;
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      {pendente ? (
+        <Etiqueta tom="alerta">Convite pendente</Etiqueta>
+      ) : status?.ultimo_acesso ? (
+        <span className="text-xs text-muted-foreground">
+          Último acesso {new Date(status.ultimo_acesso).toLocaleDateString("pt-BR")}
+        </span>
+      ) : null}
+      {!eu && (
+        <Button size="sm" variant="outline" className="h-8" onClick={() => reenviar.mutate()} disabled={reenviar.isPending}>
+          <Send /> {pendente ? "Reenviar convite" : "Enviar link de senha"}
+        </Button>
+      )}
+    </div>
   );
 }
 
@@ -156,26 +212,18 @@ function Convidar({ fechar }: { fechar: () => void }) {
 
   const convidar = useMutation({
     mutationFn: async () => {
-      const { data, error } = await supabase.functions.invoke("convidar-usuario", {
-        body: {
-          nome: nome.trim(),
-          email: email.trim(),
-          papel,
-          registro_profissional: registro.trim() || null,
-          especialidade: especialidade.trim() || null,
-          redirectTo: `${window.location.origin}/definir-senha`,
-        },
+      await chamarConvite({
+        nome: nome.trim(),
+        email: email.trim(),
+        papel,
+        registro_profissional: registro.trim() || null,
+        especialidade: especialidade.trim() || null,
       });
-      if (error) {
-        // a função devolve { erro } com a mensagem em português
-        const corpo = await (error as { context?: Response }).context?.json?.().catch(() => null);
-        throw new Error(corpo?.erro ?? error.message);
-      }
-      if (data?.erro) throw new Error(data.erro);
     },
     onSuccess: () => {
       toast.success(`Convite enviado para ${email.trim()}.`);
       void qc.invalidateQueries({ queryKey: ["profiles"] });
+      void qc.invalidateQueries({ queryKey: ["status_acessos"] });
       fechar();
     },
     onError: (e) => toast.error(e.message),
