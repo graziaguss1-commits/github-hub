@@ -2,6 +2,7 @@ import { useMutation } from "@tanstack/react-query";
 import { Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import { Confirmar } from "@/components/app/Confirmar";
 
 import { Campo, Seletor, Vazio } from "@/components/app/campos";
 import { Button } from "@/components/ui/button";
@@ -21,6 +22,7 @@ export function Compras({ plano, dados }: { plano: Plan; dados: DadosPlano }) {
   const pode = usePode("admin", "medico") && plano.status !== "encerrado";
   const recarregar = useRecarregarPlano();
   const [nova, setNova] = useState(false);
+  const [removendo, setRemovendo] = useState<string | null>(null);
 
   const remover = useMutation({
     mutationFn: async (id: string) => check(await supabase.from("plan_purchases").delete().eq("id", id)),
@@ -90,7 +92,7 @@ export function Compras({ plano, dados }: { plano: Plan; dados: DadosPlano }) {
                         <Button
                           size="icon"
                           variant="ghost"
-                          onClick={() => confirm("Remover este item do plano?") && remover.mutate(s.purchase_id)}
+                          onClick={() => setRemovendo(s.purchase_id)}
                         >
                           <Trash2 />
                         </Button>
@@ -102,6 +104,16 @@ export function Compras({ plano, dados }: { plano: Plan; dados: DadosPlano }) {
             </TableBody>
           </Table>
         </div>
+      )}
+      {removendo && (
+        <Confirmar
+          titulo="Remover este item do plano?"
+          textoBotao="Remover"
+          destrutivo
+          carregando={remover.isPending}
+          onConfirmar={() => remover.mutate(removendo, { onSettled: () => setRemovendo(null) })}
+          fechar={() => setRemovendo(null)}
+        />
       )}
       {nova && <NovaCompra plano={plano} fechar={() => setNova(false)} />}
     </div>

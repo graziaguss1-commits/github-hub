@@ -4,6 +4,7 @@ import { parseISO } from "date-fns";
 import { Pencil, Plus, Search, Trash2 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
+import { Confirmar } from "@/components/app/Confirmar";
 
 import { AppShell } from "@/components/app/AppShell";
 import { Campo, Vazio } from "@/components/app/campos";
@@ -35,6 +36,7 @@ function Pacientes() {
   const [aba, setAba] = useState<Aba>("todos");
   const [busca, setBusca] = useState("");
   const [editando, setEditando] = useState<PacienteLista | "novo" | null>(null);
+  const [excluindo, setExcluindo] = useState<PacienteLista | null>(null);
   const qc = useQueryClient();
 
   const { data: pacientes = [], isLoading } = useQuery({
@@ -161,7 +163,7 @@ function Pacientes() {
                             variant="ghost"
                             className="text-destructive"
                             aria-label="Excluir"
-                            onClick={() => confirm(`Excluir ${p.nome}?`) && excluir.mutate(p.id)}
+                            onClick={() => setExcluindo(p)}
                           >
                             <Trash2 />
                           </Button>
@@ -174,6 +176,17 @@ function Pacientes() {
             </tbody>
           </table>
         </div>
+      )}
+      {excluindo && (
+        <Confirmar
+          titulo={`Excluir ${excluindo.nome}?`}
+          descricao="Só é possível excluir paciente sem orçamento e sem plano."
+          textoBotao="Excluir"
+          destrutivo
+          carregando={excluir.isPending}
+          onConfirmar={() => excluir.mutate(excluindo.id, { onSettled: () => setExcluindo(null) })}
+          fechar={() => setExcluindo(null)}
+        />
       )}
       {editando && <FormPaciente paciente={editando === "novo" ? null : editando} fechar={() => setEditando(null)} />}
     </AppShell>

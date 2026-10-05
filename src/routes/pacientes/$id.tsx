@@ -4,6 +4,7 @@ import { ArrowLeft, Plus, Receipt } from "lucide-react";
 import { addDays, format } from "date-fns";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { Confirmar } from "@/components/app/Confirmar";
 
 import { AppShell } from "@/components/app/AppShell";
 import { Campo, Etiqueta, Seletor, Vazio } from "@/components/app/campos";
@@ -300,6 +301,7 @@ function OrcamentosDoPaciente({ patientId }: { patientId: string }) {
 
 function StatusPlano({ plano }: { plano: Plan }) {
   const recarregar = useRecarregarPlano();
+  const [encerrar, setEncerrar] = useState(false);
   const mudar = useMutation({
     mutationFn: async (status: Plan["status"]) =>
       check(await supabase.from("plans").update({ status }).eq("id", plano.id)),
@@ -325,12 +327,21 @@ function StatusPlano({ plano }: { plano: Plan }) {
       <Button
         size="sm"
         variant="ghost"
-        onClick={() =>
-          confirm("Encerrar o plano? As semanas não feitas ficam bloqueadas.") && mudar.mutate("encerrado")
-        }
+        onClick={() => setEncerrar(true)}
       >
         Encerrar
       </Button>
+      {encerrar && (
+        <Confirmar
+          titulo="Encerrar o plano?"
+          descricao="As semanas não feitas ficam bloqueadas. As aplicações já feitas continuam no histórico."
+          textoBotao="Encerrar"
+          destrutivo
+          carregando={mudar.isPending}
+          onConfirmar={() => mudar.mutate("encerrado", { onSettled: () => setEncerrar(false) })}
+          fechar={() => setEncerrar(false)}
+        />
+      )}
     </div>
   );
 }

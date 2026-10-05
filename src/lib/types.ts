@@ -197,6 +197,8 @@ export type Quote = {
   condicao_pagamento: string | null;
   acrescimo_tipo: "reais" | "percentual";
   acrescimo_valor: number;
+  motivo_status: string | null;
+  status_alterado_em: string | null;
 };
 
 export type QuoteItem = {

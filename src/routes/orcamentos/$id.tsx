@@ -1,10 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { AlertTriangle, ArrowLeft, Check, ChevronDown, ChevronUp, Copy, CreditCard, FileDown, Gift, Plus, Send, Trash2, X } from "lucide-react";
+import { AlertTriangle, ArrowLeft, Check, Repeat, ChevronDown, ChevronUp, Copy, CreditCard, FileDown, Gift, Plus, Send, Trash2, X } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 import { toast } from "sonner";
 
 import { AppShell } from "@/components/app/AppShell";
+import { Confirmar } from "@/components/app/Confirmar";
 import { Campo, Seletor, Vazio } from "@/components/app/campos";
 import {
   descreverQuantidade,
@@ -23,7 +24,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { brl, data, hojeISO, num, qtd, UNIDADE_LABEL } from "@/lib/format";
 import { useComposicao, usePerfis, useProcedimentos, useProdutos } from "@/lib/queries";
 import { check, supabase } from "@/lib/supabase";
-import type { Plan, Procedure, ProcedureItem, Product, Quote, QuoteItem, QuoteStatus, UnidadeDose } from "@/lib/types";
+import type { Plan, Procedure, ProcedureItem, Product, Quote, QuoteItem, UnidadeDose } from "@/lib/types";
 
 export const Route = createFileRoute("/orcamentos/$id")({
   head: () => ({ meta: [{ title: "Orçamento — Controle de Aplicações" }] }),
@@ -786,11 +787,19 @@ function Cartao({ icone, titulo, children }: { icone: ReactNode; titulo: string;
 
 function Acoes({ dados, irParaPrescricao }: { dados: DadosOrcamento; irParaPrescricao: () => void }) {
   const atualizar = useAtualizarQuote(dados.quote.id);
+  const recarregarOrc = useRecarregarOrcamento();
+  const recarregarPlano = useRecarregarPlano();
   const qc = useQueryClient();
   const navigate = useNavigate();
-  const [aprovar, setAprovar] = useState(false);
+  const [dialogo, setDialogo] = useState<"aprovar" | "perdido" | "cancelar" | "excluir" | "trocar" | null>(null);
   const { status } = dados.quote;
   const aberto = status === "rascunho" || status === "enviado";
+  const fechar = () => setDialogo(null);
+  const depois = () => {
+    recarregarOrc();
+    recarregarPlano();
+    fechar();
+  };
 
   const excluir = useMutation({
     mutationFn: async () => check(await supabase.from("quotes").delete().eq("id", dados.quote.id)),
@@ -800,53 +809,242 @@ function Acoes({ dados, irParaPrescricao }: { dados: DadosOrcamento; irParaPresc
     },
     onError: (e) => toast.error(e.message),
   });
+  const perdido = useMutation({
+    mutationFn: async (motivo: string) =>
+      check(await supabase.rpc("marcar_orcamento_perdido", { p_quote_id: dados.quote.id, p_motivo: motivo })),
+    onSuccess: () => {
+      toast.success("Orçamento marcado como perdido.");
+      depois();
+    },
+    onError: (e) => toast.error(e.message),
+  });
+  const cancelar = useMutation({
+    mutationFn: async ({ motivo, senha }: { motivo: string; senha: string }) =>
+      check(
+        await supabase.rpc("cancelar_orcamento", {
+          p_quote_id: dados.quote.id,
+          p_motivo: motivo,
+          p_senha: senha || null,
+        }),
+      ),
+    onSuccess: () => {
+      toast.success("Orçamento cancelado.");
+      depois();
+    },
+    onError: (e) => toast.error(e.message),
+  });
 
-  const mudar = (s: QuoteStatus, pergunta: string) => confirm(pergunta) && atualizar.mutate({ status: s });
-
-  if (status === "aprovado") {
-    return (
-      <div className="flex justify-end">
-        <Button onClick={irParaPrescricao}>Ir para a prescrição</Button>
-      </div>
-    );
+  if (status === "cancelado" || status === "perdido") {
+    return dados.quote.motivo_status ? (
+      <p className="text-right text-sm text-muted-foreground">
+        {status === "cancelado" ? "Cancelado" : "Perdido"}
+        {dados.quote.status_alterado_em && ` em ${data(dados.quote.status_alterado_em.slice(0, 10))}`} · Motivo:{" "}
+        {dados.quote.motivo_status}
+      </p>
+    ) : null;
   }
-  if (!aberto) return null;
 
   return (
     <div className="flex flex-wrap items-center justify-end gap-2">
       {status === "rascunho" && (
-        <Button variant="ghost" className="text-destructive" onClick={() => confirm("Excluir este rascunho?") && excluir.mutate()}>
+        <Button variant="ghost" className="text-destructive" onClick={() => setDialogo("excluir")}>
           <Trash2 /> Excluir rascunho
         </Button>
       )}
-      <Button variant="outline" onClick={() => mudar("perdido", "Marcar este orçamento como perdido?")}>
-        Perdido
-      </Button>
-      <Button
-        className="bg-[var(--erro)] text-white hover:bg-[var(--erro)]/90"
-        onClick={() => mudar("cancelado", "Cancelar este orçamento?")}
-      >
+      {aberto && (
+        <Button variant="outline" onClick={() => setDialogo("perdido")}>
+          Perdido
+        </Button>
+      )}
+      <Button className="bg-[var(--erro)] text-white hover:bg-[var(--erro)]/90" onClick={() => setDialogo("cancelar")}>
         <AlertTriangle /> Cancelar orçamento
       </Button>
+      {status === "aprovado" && (
+        <>
+          <Button variant="outline" onClick={() => setDialogo("trocar")}>
+            <Repeat /> Trocar medicação
+          </Button>
+          <Button onClick={irParaPrescricao}>Ir para a prescrição</Button>
+        </>
+      )}
       {status === "rascunho" && (
         <Button variant="outline" onClick={() => atualizar.mutate({ status: "enviado" })}>
           <Send /> Marcar como enviado
         </Button>
       )}
-      <Button onClick={() => setAprovar(true)} disabled={dados.itens.length === 0}>
-        <Check /> Aprovar e prescrever
-      </Button>
-      {aprovar && (
+      {aberto && (
+        <Button onClick={() => setDialogo("aprovar")} disabled={dados.itens.length === 0}>
+          <Check /> Aprovar e prescrever
+        </Button>
+      )}
+
+      {dialogo === "aprovar" && (
         <Aprovar
           dados={dados}
-          fechar={() => setAprovar(false)}
+          fechar={fechar}
           aprovado={() => {
-            setAprovar(false);
+            fechar();
             irParaPrescricao();
           }}
         />
       )}
+      {dialogo === "excluir" && (
+        <Confirmar
+          titulo="Excluir este rascunho?"
+          textoBotao="Excluir"
+          destrutivo
+          carregando={excluir.isPending}
+          onConfirmar={() => excluir.mutate()}
+          fechar={fechar}
+        />
+      )}
+      {dialogo === "perdido" && (
+        <Confirmar
+          titulo={`Marcar o orçamento #${dados.quote.numero} como perdido?`}
+          pedirMotivo
+          textoBotao="Marcar como perdido"
+          carregando={perdido.isPending}
+          onConfirmar={({ motivo }) => perdido.mutate(motivo)}
+          fechar={fechar}
+        />
+      )}
+      {dialogo === "cancelar" && (
+        <Confirmar
+          titulo={`Cancelar o orçamento #${dados.quote.numero}?`}
+          descricao={
+            status === "aprovado"
+              ? "O plano será encerrado e as doses ainda não aplicadas saem da prescrição. As aplicações já feitas e a baixa de estoque continuam no histórico."
+              : undefined
+          }
+          pedirMotivo
+          pedirSenha={status === "aprovado"}
+          textoBotao="Cancelar orçamento"
+          destrutivo
+          carregando={cancelar.isPending}
+          onConfirmar={(d) => cancelar.mutate(d)}
+          fechar={fechar}
+        />
+      )}
+      {dialogo === "trocar" && dados.quote.plan_id && (
+        <TrocarMedicacao quoteId={dados.quote.id} planId={dados.quote.plan_id} fechar={fechar} concluido={depois} />
+      )}
     </div>
+  );
+}
+
+function TrocarMedicacao({
+  quoteId,
+  planId,
+  fechar,
+  concluido,
+}: {
+  quoteId: string;
+  planId: string;
+  fechar: () => void;
+  concluido: () => void;
+}) {
+  const { data: dadosPlano } = useDadosPlano(planId);
+  const { data: procs = [] } = useProcedimentos();
+  const { data: comp = [] } = useComposicao();
+  const { data: produtos = [] } = useProdutos();
+  const [purchaseId, setPurchaseId] = useState("");
+  const [novoId, setNovoId] = useState("");
+  const [quantidade, setQuantidade] = useState("");
+  const [motivo, setMotivo] = useState("");
+
+  const saldo = dadosPlano?.saldo ?? [];
+  const atual = saldo.find((x) => x.purchase_id === purchaseId);
+  const novo = procs.find((p) => p.id === novoId);
+  const sugestao = novo ? sugerir(novo, comp, produtos) : null;
+
+  const trocar = useMutation({
+    mutationFn: async () => {
+      if (!novo || !sugestao) throw new Error("Escolha a medicação nova.");
+      check(
+        await supabase.rpc("trocar_medicacao", {
+          p_quote_id: quoteId,
+          p_purchase_id: purchaseId,
+          p_novo_procedure_id: novo.id,
+          p_quantidade: num(quantidade),
+          p_unidade_dose: sugestao.unidade,
+          p_dose_padrao: sugestao.dose,
+          p_motivo: motivo.trim(),
+        }),
+      );
+    },
+    onSuccess: () => {
+      toast.success("Medicação trocada. Prescreva a nova na aba Prescrição.");
+      concluido();
+    },
+    onError: (e) => toast.error(e.message),
+  });
+
+  return (
+    <Dialog open onOpenChange={(o) => !o && fechar()}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Trocar medicação</DialogTitle>
+        </DialogHeader>
+        <p className="text-sm text-muted-foreground">
+          O que já foi aplicado do item atual fica no histórico. O saldo não usado e as doses previstas dele saem do plano, e
+          a medicação nova entra no lugar. O total do orçamento não muda.
+        </p>
+        <div className="grid gap-3">
+          <Campo label="Sai">
+            <Seletor value={purchaseId} onChange={(e) => setPurchaseId(e.target.value)}>
+              <option value="">Escolha o item…</option>
+              {saldo.map((x) => (
+                <option key={x.purchase_id} value={x.purchase_id}>
+                  {x.procedimento} — aplicado {qtd(x.aplicado)} de {qtd(x.contratado, x.unidade_dose)}
+                </option>
+              ))}
+            </Seletor>
+          </Campo>
+          {atual && (
+            <p className="text-xs text-muted-foreground">
+              Saldo não usado que sai: {qtd(Math.max(0, atual.contratado - atual.aplicado), atual.unidade_dose)}
+            </p>
+          )}
+          <Campo label="Entra">
+            <Seletor value={novoId} onChange={(e) => setNovoId(e.target.value)}>
+              <option value="">Escolha a medicação nova…</option>
+              {procs
+                .filter((p) => p.ativo && p.categoria !== "acompanhamento")
+                .map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.nome}
+                  </option>
+                ))}
+            </Seletor>
+          </Campo>
+          <Campo
+            label={
+              novo
+                ? novo.forma_venda === "aplicacao"
+                  ? "Quantidade (nº de aplicações)"
+                  : `Quantidade (${sugestao ? UNIDADE_LABEL[sugestao.unidade] : "UI/mL"})`
+                : "Quantidade"
+            }
+          >
+            <Input inputMode="decimal" value={quantidade} onChange={(e) => setQuantidade(e.target.value)} />
+          </Campo>
+          <Campo label="Motivo">
+            <Input value={motivo} onChange={(e) => setMotivo(e.target.value)} />
+          </Campo>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={fechar}>
+            Voltar
+          </Button>
+          <Button
+            onClick={() => trocar.mutate()}
+            disabled={!purchaseId || !novoId || num(quantidade) <= 0 || !motivo.trim() || trocar.isPending}
+          >
+            <Repeat /> Trocar
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
