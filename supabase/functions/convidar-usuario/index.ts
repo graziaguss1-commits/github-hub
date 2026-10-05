@@ -8,6 +8,18 @@ const CORS = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
+function lerUsuario(token: string): string | null {
+  try {
+    const parte = token.split(".")[1] ?? "";
+    const json = JSON.parse(atob(parte.replace(/-/g, "+").replace(/_/g, "/").padEnd(Math.ceil(parte.length / 4) * 4, "=")));
+    if (json.role !== "authenticated" || typeof json.sub !== "string") return null;
+    if (typeof json.exp === "number" && json.exp * 1000 < Date.now()) return null;
+    return json.sub;
+  } catch {
+    return null;
+  }
+}
+
 function resposta(corpo: unknown, status = 200) {
   return new Response(JSON.stringify(corpo), { status, headers: { ...CORS, "Content-Type": "application/json" } });
 }
@@ -21,11 +33,13 @@ Deno.serve(async (req) => {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 
-  // Quem chama precisa ser admin liberado.
+  // Quem chama precisa ser admin liberado. A assinatura do token já foi conferida na entrada
+  // (verify_jwt); aqui só lemos quem é, sem depender da sessão continuar aberta no servidor.
   const token = (req.headers.get("Authorization") ?? "").replace("Bearer ", "");
-  const { data: quem } = await servico.auth.getUser(token);
-  if (!quem?.user) return resposta({ erro: "Faça login de novo." }, 401);
-  const { data: perfil } = await servico.from("profiles").select("papel, ativo").eq("id", quem.user.id).single();
+  const userId = lerUsuario(token);
+  if (!userId) return resposta({ erro: "Saia e entre de novo no sistema." }, 401);
+  const quem = { user: { id: userId } };
+  const { data: perfil } = await servico.from("profiles").select("papel, ativo").eq("id", userId).single();
   if (!perfil?.ativo || perfil.papel !== "admin") return resposta({ erro: "Só o admin pode convidar usuários." }, 403);
 
   const corpo = await req.json().catch(() => ({}));
