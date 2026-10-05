@@ -45,6 +45,26 @@ Deno.serve(async (req) => {
   const corpo = await req.json().catch(() => ({}));
   const redirect = typeof corpo.redirectTo === "string" ? corpo.redirectTo : undefined;
 
+  // Link de acesso sem e-mail (não conta no limite): o admin copia e manda por WhatsApp.
+  if (corpo.acao === "link") {
+    const { data: alvo, error: erroAlvo } = await servico.auth.admin.getUserById(String(corpo.user_id ?? ""));
+    if (erroAlvo || !alvo?.user?.email) return resposta({ erro: "Usuário não encontrado." }, 404);
+    const { data: gerado, error } = await servico.auth.admin.generateLink({
+      type: "recovery",
+      email: alvo.user.email,
+      ...(redirect ? { options: { redirectTo: redirect } } : {}),
+    });
+    if (error || !gerado?.properties?.action_link) return resposta({ erro: error?.message ?? "Não foi possível gerar o link." }, 400);
+    await servico.from("audit_log").insert({
+      acao: "gerar_link_acesso",
+      tabela: "profiles",
+      registro_id: alvo.user.id,
+      dados: { email: alvo.user.email },
+      user_id: quem.user.id,
+    });
+    return resposta({ ok: true, link: gerado.properties.action_link, email: alvo.user.email });
+  }
+
   // Reenviar: convite de novo para quem nunca entrou; senão, link para criar nova senha.
   if (corpo.acao === "reenviar") {
     const { data: alvo, error: erroAlvo } = await servico.auth.admin.getUserById(String(corpo.user_id ?? ""));

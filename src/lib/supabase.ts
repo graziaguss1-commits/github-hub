@@ -10,6 +10,9 @@ const env = import.meta.env as Record<string, string | undefined>;
 const url = env["VITE_SUPABASE_URL"] || SUPABASE_URL;
 const key = env["VITE_SUPABASE_PUBLISHABLE_KEY"] || env["VITE_SUPABASE_ANON_KEY"] || SUPABASE_PUBLISHABLE_KEY;
 
+/** Endereço publicado: os links de convite e de senha sempre apontam para cá (a equipe não abre a pré-visualização do Lovable). */
+export const SITE_PUBLICADO = "https://nucleo-aplicacoes.lovable.app";
+
 export const bancoConfigurado = Boolean(url && key);
 
 export const supabase: SupabaseClient = createClient(

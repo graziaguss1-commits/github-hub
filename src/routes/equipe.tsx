@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import { Send, UserPlus } from "lucide-react";
+import { Link2, Send, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 
 import { AppShell } from "@/components/app/AppShell";
@@ -14,7 +14,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { PAPEL_LABEL, useAuth, usePode } from "@/lib/auth";
 import { usePerfis } from "@/lib/queries";
-import { check, supabase } from "@/lib/supabase";
+import { check, SITE_PUBLICADO, supabase } from "@/lib/supabase";
 import type { Papel, Profile } from "@/lib/types";
 
 export const Route = createFileRoute("/equipe")({
@@ -150,14 +150,14 @@ type StatusAcesso = { id: string; confirmado: boolean; ultimo_acesso: string | n
 /** Chama a função do servidor e devolve a mensagem de erro em português, se houver. */
 async function chamarConvite(body: Record<string, unknown>) {
   const { data, error } = await supabase.functions.invoke("convidar-usuario", {
-    body: { ...body, redirectTo: `${window.location.origin}/definir-senha` },
+    body: { ...body, redirectTo: `${SITE_PUBLICADO}/definir-senha` },
   });
   if (error) {
     const corpo = await (error as { context?: Response }).context?.json?.().catch(() => null);
     throw new Error(corpo?.erro ?? error.message);
   }
   if (data?.erro) throw new Error(data.erro);
-  return data as { ok: true; email?: string };
+  return data as { ok: true; email?: string; link?: string };
 }
 
 function SituacaoConvite({ perfil, status, eu }: { perfil: Profile; status: StatusAcesso | undefined; eu: boolean }) {
@@ -167,6 +167,21 @@ function SituacaoConvite({ perfil, status, eu }: { perfil: Profile; status: Stat
     onSuccess: (r) => {
       toast.success(`E-mail reenviado para ${r.email ?? perfil.email ?? perfil.nome}.`);
       void qc.invalidateQueries({ queryKey: ["status_acessos"] });
+    },
+    onError: (e) => toast.error(e.message),
+  });
+
+  const copiarLink = useMutation({
+    mutationFn: () => chamarConvite({ acao: "link", user_id: perfil.id }),
+    onSuccess: async (r) => {
+      if (!r.link) throw new Error("Não foi possível gerar o link.");
+      try {
+        await navigator.clipboard.writeText(r.link);
+        toast.success("Link copiado. Mande por WhatsApp: vale por 1 hora e só pode ser usado uma vez.");
+      } catch {
+        // sem permissão de área de transferência: mostra para copiar à mão
+        window.prompt("Copie o link de acesso:", r.link);
+      }
     },
     onError: (e) => toast.error(e.message),
   });
@@ -184,6 +199,11 @@ function SituacaoConvite({ perfil, status, eu }: { perfil: Profile; status: Stat
       {!eu && (
         <Button size="sm" variant="outline" className="h-8" onClick={() => reenviar.mutate()} disabled={reenviar.isPending}>
           <Send /> {pendente ? "Reenviar convite" : "Enviar link de senha"}
+        </Button>
+      )}
+      {!eu && (
+        <Button size="sm" variant="ghost" className="h-8" onClick={() => copiarLink.mutate()} disabled={copiarLink.isPending}>
+          <Link2 /> Copiar link de acesso
         </Button>
       )}
     </div>

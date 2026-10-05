@@ -27,6 +27,20 @@ function Login() {
     if (session) void navigate({ to: "/" });
   }, [session, navigate]);
 
+  // Link do e-mail vencido ou já usado: o Supabase devolve o erro no endereço.
+  const [erroLink, setErroLink] = useState<string | null>(null);
+  useEffect(() => {
+    const p = new URLSearchParams(window.location.hash.replace(/^#/, "") || window.location.search);
+    const codigo = p.get("error_code");
+    if (codigo) {
+      setErroLink(
+        codigo === "otp_expired"
+          ? "Este link já foi usado ou expirou. Peça ao administrador um novo link de acesso."
+          : (p.get("error_description")?.replace(/\+/g, " ") ?? "Não foi possível usar este link."),
+      );
+    }
+  }, []);
+
   async function enviar(e: FormEvent) {
     e.preventDefault();
     setEnviando(true);
@@ -57,6 +71,9 @@ function Login() {
           <Syringe className="size-5 text-primary" />
           <h1 className="text-lg font-semibold">Controle de Aplicações</h1>
         </div>
+        {erroLink && (
+          <p className="mb-4 rounded-[12px] bg-[var(--erro)]/10 p-3 text-sm text-[var(--erro)]">{erroLink}</p>
+        )}
         {!bancoConfigurado && (
           <p className="mb-4 rounded-[12px] bg-[var(--atencao)]/10 p-3 text-sm text-[var(--atencao)]">
             O banco de dados ainda não foi ativado neste projeto.

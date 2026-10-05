@@ -40,8 +40,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await carregarPerfil(data.session);
       if (ativo) setCarregando(false);
     });
-    const { data: sub } = supabase.auth.onAuthStateChange((_evento, s) => {
+    const { data: sub } = supabase.auth.onAuthStateChange((evento, s) => {
       setSession(s);
+      // Link de "criar/recuperar senha" que caiu em outra página: leva para a tela de senha.
+      if (evento === "PASSWORD_RECOVERY" && !window.location.pathname.startsWith("/definir-senha")) {
+        window.location.replace("/definir-senha");
+      }
       // fora do callback para não travar o cliente de auth
       setTimeout(() => void carregarPerfil(s), 0);
     });
