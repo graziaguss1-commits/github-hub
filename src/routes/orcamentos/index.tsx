@@ -6,6 +6,7 @@ import { toast } from "sonner";
 
 import { AppShell } from "@/components/app/AppShell";
 import { Campo, Seletor, Vazio } from "@/components/app/campos";
+import { SeletorPaciente } from "@/components/app/SeletorPaciente";
 import { STATUS_ORCAMENTO } from "@/components/orcamento/dados";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -261,14 +262,7 @@ function NovoOrcamento({ pacientes, fechar }: { pacientes: Patient[]; fechar: ()
           <DialogTitle>Novo orçamento</DialogTitle>
         </DialogHeader>
         <Campo label="Paciente">
-          <Seletor value={paciente} onChange={(e) => setPaciente(e.target.value)}>
-            <option value="">Escolha…</option>
-            {pacientes.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.nome}
-              </option>
-            ))}
-          </Seletor>
+          <SeletorPaciente pacientes={pacientes} valor={paciente} onChange={setPaciente} />
         </Campo>
         <p className="text-xs text-muted-foreground">Paciente novo? Cadastre em Pacientes e crie o orçamento pela página dele.</p>
         <DialogFooter>
