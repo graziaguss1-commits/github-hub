@@ -17,6 +17,32 @@ import type { Application, Plan, PlanDose } from "@/lib/types";
 
 import { chaveSemana, consumoProduto, useRecarregarPlano, type DadosPlano } from "./dados";
 
+/** "dose 2 de 7" para doses repetidas do mesmo item na semana; vazio quando há uma só. */
+function numerar<T extends { purchase_id: string }>(lista: T[]): (t: T) => string {
+  const total = new Map<string, number>();
+  for (const t of lista) total.set(t.purchase_id, (total.get(t.purchase_id) ?? 0) + 1);
+  const pos = new Map<T, number>();
+  const visto = new Map<string, number>();
+  for (const t of lista) {
+    const n = (visto.get(t.purchase_id) ?? 0) + 1;
+    visto.set(t.purchase_id, n);
+    pos.set(t, n);
+  }
+  return (t) => {
+    const n = total.get(t.purchase_id) ?? 1;
+    return n > 1 ? `dose ${pos.get(t)} de ${n}` : "";
+  };
+}
+
+function NumeroDose({ texto }: { texto: string }) {
+  if (!texto) return null;
+  return (
+    <span className="ml-2 inline-flex rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
+      {texto}
+    </span>
+  );
+}
+
 type Semana = {
   semana: number;
   sub: number;
@@ -129,7 +155,7 @@ export function Execucao({ plano, dados }: { plano: Plan; dados: DadosPlano }) {
                             </p>
                           )}
                           {sit === "realizada"
-                            ? itensApp.map((i) => {
+                            ? itensApp.map((i, _k, todos) => {
                                 const consumos = dados.consumos.filter((c) => c.application_item_id === i.id);
                                 return (
                                   <p key={i.id}>
@@ -146,16 +172,18 @@ export function Execucao({ plano, dados }: { plano: Plan; dados: DadosPlano }) {
                                         : qtd(i.dose_real, i.unidade)}
                                       {i.dose_real !== i.dose_prevista && ` (previsto ${qtd(i.dose_prevista, i.unidade)})`}
                                     </span>
+                                    <NumeroDose texto={numerar(todos)(i)} />
                                   </p>
                                 );
                               })
-                            : s.doses.map((d) => {
+                            : s.doses.map((d, _k, todos) => {
                                 const obs = dados.compras.find((c) => c.id === d.purchase_id)?.observacao;
                                 return (
                                   <div key={d.id}>
                                     <p>
                                       <span className="font-semibold">{nomeCompra(d.purchase_id)}</span>
                                       <span className="text-muted-foreground"> — {qtd(d.dose, unidadeCompra(d.purchase_id))}</span>
+                                      <NumeroDose texto={numerar(todos)(d)} />
                                     </p>
                                     {obs && <p className="text-xs italic text-muted-foreground">{obs}</p>}
                                   </div>
@@ -267,6 +295,7 @@ function Realizar({
   );
 
   // Consumo por dose e produto, com o lote sugerido pela validade mais próxima (FEFO).
+  const numerarDoses = numerar(semana.doses);
   const linhas = semana.doses.map((d) => {
     const compra = dados.compras.find((c) => c.id === d.purchase_id);
     const f = form[d.id] ?? { dose_real: String(d.dose), lotes: {} };
@@ -335,7 +364,10 @@ function Realizar({
             <div key={dose.id} className="rounded-[16px] border bg-card p-4">
               <div className="mb-2 flex flex-wrap items-end gap-3">
                 <div className="flex-1">
-                  <p className="font-medium">{nomeCompra(dose.purchase_id)}</p>
+                  <p className="font-medium">
+                    {nomeCompra(dose.purchase_id)}
+                    <NumeroDose texto={numerarDoses(dose)} />
+                  </p>
                   <p className="text-xs text-muted-foreground">Dose prevista: {qtd(dose.dose, compra?.unidade_dose)}</p>
                 </div>
                 <Campo label="Dose real" className="w-28">
@@ -476,6 +508,7 @@ function Editar({
 }) {
   const recarregar = useRecarregarPlano();
   const itens = dados.itens.filter((i) => i.application_id === semana.app?.id);
+  const numerarItens = numerar(itens);
   const [doses, setDoses] = useState<Record<string, string>>(() =>
     Object.fromEntries(itens.map((i) => [i.id, String(i.dose_real)])),
   );
@@ -517,7 +550,10 @@ function Editar({
         <div className="grid gap-3">
           {itens.map((i) => (
             <div key={i.id} className="flex items-end gap-3">
-              <p className="flex-1 text-sm">{nomeCompra(i.purchase_id)}</p>
+              <p className="flex-1 text-sm">
+                {nomeCompra(i.purchase_id)}
+                <NumeroDose texto={numerarItens(i)} />
+              </p>
               <Campo label={`Dose real (${qtd(i.dose_real, i.unidade)})`} className="w-40">
                 <Input
                   inputMode="decimal"
