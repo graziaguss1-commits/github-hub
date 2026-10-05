@@ -1,6 +1,6 @@
 import { useMutation } from "@tanstack/react-query";
 import { Lock, Plus, Wand2, X } from "lucide-react";
-import { useMemo, useState, type DragEvent } from "react";
+import { useMemo, useState, type DragEvent, type ReactNode } from "react";
 import { toast } from "sonner";
 
 import { Etiqueta, Seletor, Vazio } from "@/components/app/campos";
@@ -35,7 +35,18 @@ const FREQUENCIAS: { valor: Frequencia; rotulo: string }[] = [
   { valor: "mensal", rotulo: "Mensal (a cada 4 semanas)" },
   { valor: "n", rotulo: "A cada N semanas" },
 ];
-type Config = { frequencia: Frequencia; cadaN: string; inicio: string };
+// dose = dose de cada aplicação; porSemana = quantas doses na mesma semana (ex.: 7 seringas para levar);
+// semanas = em quantas semanas (vazio = até acabar o saldo).
+type Config = { frequencia: Frequencia; cadaN: string; inicio: string; dose: string; porSemana: string; semanas: string };
+
+function MiniCampo({ rotulo, children }: { rotulo: string; children: ReactNode }) {
+  return (
+    <div className="grid gap-1">
+      <span className="text-xs text-muted-foreground">{rotulo}</span>
+      {children}
+    </div>
+  );
+}
 
 export function Prescricao({ plano, dados }: { plano: Plan; dados: DadosPlano }) {
   const pode = usePode("admin", "medico") && plano.status !== "encerrado";
@@ -97,28 +108,47 @@ export function Prescricao({ plano, dados }: { plano: Plan; dados: DadosPlano })
   }
 
   const primeiraLivre = Math.max(0, ...[...travadas].map((k) => Number(k.split("-")[0]))) + 1;
-  const configDe = (id: string): Config =>
-    config[id] ?? { frequencia: "semanal", cadaN: "3", inicio: String(primeiraLivre) };
+  const configDe = (id: string): Config => {
+    const c = dados.compras.find((x) => x.id === id);
+    return (
+      config[id] ?? {
+        frequencia: "semanal",
+        cadaN: "3",
+        inicio: String(primeiraLivre),
+        dose: String(c?.dose_padrao ?? 1),
+        porSemana: "1",
+        semanas: "",
+      }
+    );
+  };
 
-  /** Refaz as doses previstas de um item a partir da frequência escolhida para ele. */
+  /** Refaz as doses previstas de um item: dose × doses na semana, na frequência escolhida, até o saldo. */
   function dosesDoItem(c: PlanPurchase, base: Chip[]): Chip[] {
     const cfg = configDe(c.id);
     const passo =
       cfg.frequencia === "quinzenal" ? 2 : cfg.frequencia === "mensal" ? 4 : cfg.frequencia === "n" ? Math.max(1, Math.round(num(cfg.cadaN))) : 1;
     const subs = cfg.frequencia === "2x" ? [1, 2] : [1];
+    const doseCfg = num(cfg.dose) > 0 ? num(cfg.dose) : c.dose_padrao;
+    const porSemana = Math.max(1, Math.round(num(cfg.porSemana)) || 1);
+    const limiteSemanas = Math.round(num(cfg.semanas)) || Infinity;
     let semana = Math.max(primeiraLivre, Math.round(num(cfg.inicio)) || primeiraLivre);
     let restante =
       c.contratado - base.filter((x) => x.realizada && x.purchase_id === c.id).reduce((s, x) => s + num(x.dose), 0);
     const novas: Chip[] = [];
+    let semanasUsadas = 0;
     let guarda = 0;
-    while (restante > 1e-9 && guarda++ < 500) {
+    while (restante > 1e-9 && semanasUsadas < limiteSemanas && guarda++ < 500) {
+      let usou = false;
       for (const sub of subs) {
-        if (restante <= 1e-9) break;
         if (travadas.has(chaveSemana(semana, sub))) continue;
-        const dose = Math.min(c.dose_padrao, restante);
-        novas.push({ key: novaChave(), purchase_id: c.id, semana, sub_semana: sub, dose: String(dose), realizada: false });
-        restante -= dose;
+        for (let k = 0; k < porSemana && restante > 1e-9; k++) {
+          const dose = Math.min(doseCfg, restante);
+          novas.push({ key: novaChave(), purchase_id: c.id, semana, sub_semana: sub, dose: String(dose), realizada: false });
+          restante -= dose;
+          usou = true;
+        }
       }
+      if (usou) semanasUsadas++;
       semana += passo;
     }
     return novas;
@@ -167,56 +197,79 @@ export function Prescricao({ plano, dados }: { plano: Plan; dados: DadosPlano })
 
   return (
     <div className="grid gap-4">
-      <div className="cartao grid gap-2 p-6">
-        <p className="text-sm font-medium">Saldo do que foi comprado e frequência de cada item</p>
+      <div className="cartao grid gap-3 p-6">
+        <p className="font-semibold">Itens do orçamento</p>
         {pool.map(({ compra: c, prescrito, excede }) => {
           const cfg = configDe(c.id);
           const setCfg = (m: Partial<Config>) => setConfig((x) => ({ ...x, [c.id]: { ...cfg, ...m } }));
+          const un = c.unidade_dose === "aplicacao" ? "" : UNIDADE_LABEL[c.unidade_dose];
           return (
-            <div key={c.id} className="flex flex-wrap items-center gap-2 border-t pt-2 text-sm first:border-t-0 first:pt-0">
-              <span className="min-w-48 font-medium">{nomeCompra(c)}</span>
-              <span className={excede ? "font-medium text-destructive" : "text-muted-foreground"}>
-                {qtd(prescrito)} / {qtd(c.contratado, c.unidade_dose)} (restam {qtd(Math.max(0, c.contratado - prescrito))})
-              </span>
-              {excede && <Etiqueta tom="perigo">Excede</Etiqueta>}
+            <div key={c.id} className="flex flex-wrap items-end gap-3 rounded-[16px] border bg-muted/40 px-4 py-3">
+              <div className="min-w-48 flex-1">
+                <p className="font-medium">{nomeCompra(c)}</p>
+                <p className="text-xs text-muted-foreground">
+                  {c.vendido_por === "aplicacao" ? `${qtd(c.quantidade)} aplicações` : qtd(c.quantidade, c.unidade_dose)}
+                  {c.observacao && ` · ${c.observacao}`}
+                </p>
+                <p className={`text-sm ${excede ? "font-medium text-destructive" : ""}`}>
+                  Usado: {qtd(prescrito)} / {qtd(c.contratado, c.unidade_dose)} — Restam:{" "}
+                  {qtd(Math.max(0, c.contratado - prescrito), c.unidade_dose)}
+                  {excede && " · Excede"}
+                </p>
+              </div>
               {pode && (
-                <div className="ml-auto flex flex-wrap items-center gap-2">
-                  <Seletor
-                    className="h-8 w-auto"
-                    value={cfg.frequencia}
-                    onChange={(e) => setCfg({ frequencia: e.target.value as Frequencia })}
-                  >
-                    {FREQUENCIAS.map((f) => (
-                      <option key={f.valor} value={f.valor}>
-                        {f.rotulo}
-                      </option>
-                    ))}
-                  </Seletor>
-                  {cfg.frequencia === "n" && (
-                    <Input
-                      className="h-8 w-16"
-                      inputMode="numeric"
-                      value={cfg.cadaN}
-                      onChange={(e) => setCfg({ cadaN: e.target.value })}
-                      aria-label="A cada quantas semanas"
-                    />
-                  )}
-                  <span className="text-xs text-muted-foreground">a partir da semana</span>
-                  <Input
-                    className="h-8 w-14"
-                    inputMode="numeric"
-                    value={cfg.inicio}
-                    onChange={(e) => setCfg({ inicio: e.target.value })}
-                    aria-label="Semana de início"
-                  />
-                  <Button size="sm" variant="outline" onClick={() => distribuirItem(c)}>
+                <>
+                  <MiniCampo rotulo={`Dose/aplicação${un ? ` (${un})` : ""}`}>
+                    <Input className="h-9 w-20" inputMode="decimal" value={cfg.dose} onChange={(e) => setCfg({ dose: e.target.value })} />
+                  </MiniCampo>
+                  <MiniCampo rotulo="Doses na semana">
+                    <Input className="h-9 w-20" inputMode="numeric" value={cfg.porSemana} onChange={(e) => setCfg({ porSemana: e.target.value })} />
+                  </MiniCampo>
+                  <MiniCampo rotulo="Frequência">
+                    <div className="flex gap-1">
+                      <Seletor className="h-9 w-auto" value={cfg.frequencia} onChange={(e) => setCfg({ frequencia: e.target.value as Frequencia })}>
+                        {FREQUENCIAS.map((f) => (
+                          <option key={f.valor} value={f.valor}>
+                            {f.rotulo}
+                          </option>
+                        ))}
+                      </Seletor>
+                      {cfg.frequencia === "n" && (
+                        <Input className="h-9 w-14" inputMode="numeric" value={cfg.cadaN} onChange={(e) => setCfg({ cadaN: e.target.value })} aria-label="A cada quantas semanas" />
+                      )}
+                    </div>
+                  </MiniCampo>
+                  <MiniCampo rotulo="A partir de">
+                    <div className="flex items-center gap-1">
+                      <span className="text-sm text-muted-foreground">S</span>
+                      <Input className="h-9 w-14" inputMode="numeric" value={cfg.inicio} onChange={(e) => setCfg({ inicio: e.target.value })} />
+                    </div>
+                  </MiniCampo>
+                  <MiniCampo rotulo="Por semanas">
+                    <Input className="h-9 w-20" inputMode="numeric" placeholder="até acabar" value={cfg.semanas} onChange={(e) => setCfg({ semanas: e.target.value })} />
+                  </MiniCampo>
+                  <Button size="sm" onClick={() => distribuirItem(c)}>
                     <Wand2 /> Distribuir
                   </Button>
-                </div>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="text-destructive"
+                    onClick={() => mudar((cs) => cs.filter((x) => x.purchase_id !== c.id || x.realizada))}
+                  >
+                    Limpar
+                  </Button>
+                </>
               )}
             </div>
           );
         })}
+        {pode && (
+          <p className="text-xs text-muted-foreground">
+            Ex.: GHK-CU com dose 10 UI, 7 doses na semana, semanal, a partir de S1, por 3 semanas → 7 seringas de 10 UI nas
+            semanas 1, 2 e 3. Cada dose fica registrada separada.
+          </p>
+        )}
       </div>
 
       {pode && (

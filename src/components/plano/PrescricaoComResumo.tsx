@@ -12,6 +12,19 @@ import type { Plan } from "@/lib/types";
 import { chaveSemana, type DadosPlano } from "./dados";
 import { Prescricao } from "./Prescricao";
 
+/** Junta doses iguais da mesma semana: "GHK-CU 10 UI ×7". */
+function agrupar(doses: DadosPlano["doses"]) {
+  const mapa = new Map<string, { chave: string; purchase_id: string; dose: number; realizada: boolean; n: number }>();
+  for (const d of doses) {
+    const realizada = d.status === "realizada";
+    const chave = `${d.purchase_id}:${d.dose}:${realizada}`;
+    const g = mapa.get(chave);
+    if (g) g.n++;
+    else mapa.set(chave, { chave, purchase_id: d.purchase_id, dose: d.dose, realizada, n: 1 });
+  }
+  return [...mapa.values()];
+}
+
 /** Prescrição como no NutroClinic: resumo por semana e botão "Alterar prescrição" para editar. */
 export function PrescricaoComResumo({ plano, dados }: { plano: Plan; dados: DadosPlano }) {
   const pode = usePode("admin", "medico") && plano.status !== "encerrado";
@@ -91,18 +104,19 @@ export function PrescricaoComResumo({ plano, dados }: { plano: Plan; dados: Dado
               <span className="w-24 text-xs text-muted-foreground">
                 {dataCurta(ini)} a {dataCurta(addDays(ini, 6))}
               </span>
-              {doses.map((d) => (
+              {agrupar(doses).map((g) => (
                 <span
-                  key={d.id}
-                  title={`${nomeCompra(d.purchase_id)} · ${qtd(d.dose, unidade(d.purchase_id))}`}
-                  className={`inline-flex max-w-56 items-center gap-2 rounded-full px-3 py-1 text-sm ${
-                    d.status === "realizada"
-                      ? "bg-[var(--sucesso)] text-white"
-                      : "bg-primary text-primary-foreground"
+                  key={g.chave}
+                  title={`${nomeCompra(g.purchase_id)} · ${g.n}× ${qtd(g.dose, unidade(g.purchase_id))}`}
+                  className={`inline-flex max-w-64 items-center gap-2 rounded-full px-3 py-1 text-sm ${
+                    g.realizada ? "bg-[var(--sucesso)] text-white" : "bg-primary text-primary-foreground"
                   }`}
                 >
-                  <span className="truncate">{nomeCompra(d.purchase_id)}</span>
-                  <span className="shrink-0 opacity-80">{qtd(d.dose, unidade(d.purchase_id))}</span>
+                  <span className="truncate">{nomeCompra(g.purchase_id)}</span>
+                  <span className="shrink-0 opacity-80">
+                    {qtd(g.dose, unidade(g.purchase_id))}
+                    {g.n > 1 && ` ×${g.n}`}
+                  </span>
                 </span>
               ))}
               {feitas.has(chave) && (
