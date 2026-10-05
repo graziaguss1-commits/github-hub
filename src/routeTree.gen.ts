@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as DefinirSenhaRouteImport } from './routes/definir-senha'
 import { Route as ProdutosRouteImport } from './routes/produtos'
 import { Route as ProcedimentosRouteImport } from './routes/procedimentos'
 import { Route as EstoqueRouteImport } from './routes/estoque'
@@ -30,6 +31,11 @@ const IndexRoute = IndexRouteImport.update({
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DefinirSenhaRoute = DefinirSenhaRouteImport.update({
+  id: '/definir-senha',
+  path: '/definir-senha',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ProdutosRoute = ProdutosRouteImport.update({
@@ -86,6 +92,7 @@ const ImprimirPlanoIdRoute = ImprimirPlanoIdRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/definir-senha': typeof DefinirSenhaRoute
   '/produtos': typeof ProdutosRoute
   '/procedimentos': typeof ProcedimentosRoute
   '/estoque': typeof EstoqueRoute
@@ -100,6 +107,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/definir-senha': typeof DefinirSenhaRoute
   '/produtos': typeof ProdutosRoute
   '/procedimentos': typeof ProcedimentosRoute
   '/estoque': typeof EstoqueRoute
@@ -115,6 +123,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/definir-senha': typeof DefinirSenhaRoute
   '/produtos': typeof ProdutosRoute
   '/procedimentos': typeof ProcedimentosRoute
   '/estoque': typeof EstoqueRoute
@@ -131,6 +140,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/login'
+    | '/definir-senha'
     | '/produtos'
     | '/procedimentos'
     | '/estoque'
@@ -145,6 +155,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/login'
+    | '/definir-senha'
     | '/produtos'
     | '/procedimentos'
     | '/estoque'
@@ -159,6 +170,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/login'
+    | '/definir-senha'
     | '/produtos'
     | '/procedimentos'
     | '/estoque'
@@ -174,6 +186,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   LoginRoute: typeof LoginRoute
+  DefinirSenhaRoute: typeof DefinirSenhaRoute
   ProdutosRoute: typeof ProdutosRoute
   ProcedimentosRoute: typeof ProcedimentosRoute
   EstoqueRoute: typeof EstoqueRoute
@@ -200,6 +213,13 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/definir-senha': {
+      id: '/definir-senha'
+      path: '/definir-senha'
+      fullPath: '/definir-senha'
+      preLoaderRoute: typeof DefinirSenhaRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/produtos': {
@@ -278,6 +298,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   LoginRoute: LoginRoute,
+  DefinirSenhaRoute: DefinirSenhaRoute,
   ProdutosRoute: ProdutosRoute,
   ProcedimentosRoute: ProcedimentosRoute,
   EstoqueRoute: EstoqueRoute,

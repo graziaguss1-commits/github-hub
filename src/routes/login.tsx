@@ -83,6 +83,22 @@ function Login() {
           <Button type="submit" disabled={enviando || !bancoConfigurado}>
             {modo === "entrar" ? "Entrar" : "Criar acesso"}
           </Button>
+          {modo === "entrar" && (
+            <button
+              type="button"
+              className="text-sm text-muted-foreground underline-offset-4 hover:underline"
+              onClick={async () => {
+                if (!email.includes("@")) return toast.error("Digite seu e-mail acima primeiro.");
+                const { error } = await supabase.auth.resetPasswordForEmail(email, {
+                  redirectTo: `${window.location.origin}/definir-senha`,
+                });
+                if (error) toast.error(error.message);
+                else toast.success("Enviamos um link para criar uma nova senha.");
+              }}
+            >
+              Esqueci a senha
+            </button>
+          )}
           <button
             type="button"
             className="text-sm text-muted-foreground underline-offset-4 hover:underline"

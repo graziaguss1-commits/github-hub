@@ -1,12 +1,14 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
+import { Send, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 
 import { AppShell } from "@/components/app/AppShell";
 import { Campo, Etiqueta, Seletor } from "@/components/app/campos";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -37,10 +39,10 @@ function Equipe() {
   });
 
   return (
-    <AppShell titulo="Equipe">
+    <AppShell titulo="Equipe" acoes={admin && <ConvidarBotao />}>
       <p className="mb-4 text-sm text-muted-foreground">
-        Quem cria acesso entra bloqueado. O admin libera, define o papel e preenche CRM/COREN e especialidade
-        (saem no orçamento e no plano impressos). Para cadastrar um médico, ele cria o próprio acesso na tela de login.
+        Use "Convidar usuário" para mandar o acesso por e-mail. Quem cria a conta sozinho na tela de login entra
+        bloqueado até o admin liberar. CRM/COREN e especialidade saem no orçamento e no plano impressos.
       </p>
       <div className="cartao mb-8 overflow-hidden">
         <Table>
@@ -129,6 +131,108 @@ function Equipe() {
         </div>
       )}
     </AppShell>
+  );
+}
+
+function ConvidarBotao() {
+  const [aberto, setAberto] = useState(false);
+  return (
+    <>
+      <Button className="rounded-full" onClick={() => setAberto(true)}>
+        <UserPlus /> Convidar usuário
+      </Button>
+      {aberto && <Convidar fechar={() => setAberto(false)} />}
+    </>
+  );
+}
+
+function Convidar({ fechar }: { fechar: () => void }) {
+  const qc = useQueryClient();
+  const [nome, setNome] = useState("");
+  const [email, setEmail] = useState("");
+  const [papel, setPapel] = useState<Papel>("enfermagem");
+  const [registro, setRegistro] = useState("");
+  const [especialidade, setEspecialidade] = useState("");
+
+  const convidar = useMutation({
+    mutationFn: async () => {
+      const { data, error } = await supabase.functions.invoke("convidar-usuario", {
+        body: {
+          nome: nome.trim(),
+          email: email.trim(),
+          papel,
+          registro_profissional: registro.trim() || null,
+          especialidade: especialidade.trim() || null,
+          redirectTo: `${window.location.origin}/definir-senha`,
+        },
+      });
+      if (error) {
+        // a função devolve { erro } com a mensagem em português
+        const corpo = await (error as { context?: Response }).context?.json?.().catch(() => null);
+        throw new Error(corpo?.erro ?? error.message);
+      }
+      if (data?.erro) throw new Error(data.erro);
+    },
+    onSuccess: () => {
+      toast.success(`Convite enviado para ${email.trim()}.`);
+      void qc.invalidateQueries({ queryKey: ["profiles"] });
+      fechar();
+    },
+    onError: (e) => toast.error(e.message),
+  });
+
+  return (
+    <Dialog open onOpenChange={(o) => !o && fechar()}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Convidar usuário</DialogTitle>
+        </DialogHeader>
+        <p className="text-sm text-muted-foreground">
+          A pessoa recebe um e-mail com um link para criar a senha e já entra liberada com o papel escolhido.
+        </p>
+        <form
+          className="grid gap-3"
+          onSubmit={(e) => {
+            e.preventDefault();
+            convidar.mutate();
+          }}
+        >
+          <Campo label="Nome">
+            <Input value={nome} onChange={(e) => setNome(e.target.value)} required />
+          </Campo>
+          <Campo label="E-mail">
+            <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+          </Campo>
+          <Campo label="Papel">
+            <Seletor value={papel} onChange={(e) => setPapel(e.target.value as Papel)}>
+              {(Object.keys(PAPEL_LABEL) as Papel[]).map((k) => (
+                <option key={k} value={k}>
+                  {PAPEL_LABEL[k]}
+                </option>
+              ))}
+            </Seletor>
+          </Campo>
+          {papel !== "admin" && (
+            <div className="grid grid-cols-2 gap-3">
+              <Campo label={papel === "medico" ? "CRM" : "COREN"}>
+                <Input value={registro} onChange={(e) => setRegistro(e.target.value)} />
+              </Campo>
+              <Campo label="Especialidade">
+                <Input value={especialidade} onChange={(e) => setEspecialidade(e.target.value)} />
+              </Campo>
+            </div>
+          )}
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={fechar}>
+              Cancelar
+            </Button>
+            <Button type="submit" disabled={convidar.isPending}>
+              <Send /> Enviar convite
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }
 
