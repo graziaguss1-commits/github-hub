@@ -9,7 +9,7 @@ import { data, dataCurta, inicioDaSemana, qtd, rotuloSemana } from "@/lib/format
 import { useProcedimentos } from "@/lib/queries";
 import type { Plan } from "@/lib/types";
 
-import { chaveSemana, type DadosPlano } from "./dados";
+import { chaveSemana, corDoItem, type DadosPlano } from "./dados";
 import { Prescricao } from "./Prescricao";
 
 /** Junta doses iguais da mesma semana: "GHK-CU 10 UI ×7". */
@@ -108,9 +108,8 @@ export function PrescricaoComResumo({ plano, dados }: { plano: Plan; dados: Dado
                 <span
                   key={g.chave}
                   title={`${nomeCompra(g.purchase_id)} · ${g.n}× ${qtd(g.dose, unidade(g.purchase_id))}`}
-                  className={`inline-flex max-w-64 items-center gap-2 rounded-full px-3 py-1 text-sm ${
-                    g.realizada ? "bg-[var(--sucesso)] text-white" : "bg-primary text-primary-foreground"
-                  }`}
+                  className="inline-flex max-w-64 items-center gap-2 rounded-full px-3 py-1 text-sm text-white"
+                  style={{ background: g.realizada ? "var(--sucesso)" : corDoItem(dados.compras, g.purchase_id) }}
                 >
                   <span className="truncate">{nomeCompra(g.purchase_id)}</span>
                   <span className="shrink-0 opacity-80">

@@ -96,3 +96,10 @@ export function consumoProduto(
 export function chaveSemana(semana: number, sub: number) {
   return `${semana}-${sub}`;
 }
+
+/** Cor de cada medicação na prescrição (paleta de gráficos da identidade visual). */
+const PALETA = ["#233E6E", "#2268C3", "#CF7317", "#8F4DA6", "#379A69", "#3D8CDB"];
+export function corDoItem(compras: { id: string }[], purchaseId: string): string {
+  const i = compras.findIndex((c) => c.id === purchaseId);
+  return PALETA[(i < 0 ? 0 : i) % PALETA.length] ?? "#233E6E";
+}

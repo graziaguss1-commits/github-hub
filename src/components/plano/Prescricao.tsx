@@ -12,7 +12,7 @@ import { useProcedimentos } from "@/lib/queries";
 import { check, supabase } from "@/lib/supabase";
 import type { Plan, PlanPurchase } from "@/lib/types";
 
-import { chaveSemana, useRecarregarPlano, type DadosPlano } from "./dados";
+import { chaveSemana, corDoItem, useRecarregarPlano, type DadosPlano } from "./dados";
 
 type Chip = {
   key: string;
@@ -41,8 +41,8 @@ type Config = { frequencia: Frequencia; cadaN: string; inicio: string; dose: str
 
 function MiniCampo({ rotulo, children }: { rotulo: string; children: ReactNode }) {
   return (
-    <div className="grid gap-1">
-      <span className="text-xs text-muted-foreground">{rotulo}</span>
+    <div className="grid gap-0.5">
+      <span className="text-[11px] text-muted-foreground">{rotulo}</span>
       {children}
     </div>
   );
@@ -203,31 +203,53 @@ export function Prescricao({ plano, dados }: { plano: Plan; dados: DadosPlano })
           const cfg = configDe(c.id);
           const setCfg = (m: Partial<Config>) => setConfig((x) => ({ ...x, [c.id]: { ...cfg, ...m } }));
           const un = c.unidade_dose === "aplicacao" ? "" : UNIDADE_LABEL[c.unidade_dose];
+          const falta = c.contratado - prescrito;
+          const pct = c.contratado ? Math.min(100, (100 * prescrito) / c.contratado) : 0;
+          const estado = excede ? "excede" : prescrito === 0 ? "vazio" : falta <= 1e-9 ? "completo" : "parcial";
+          const cor = {
+            completo: { borda: "border-[var(--sucesso)]/40 bg-[var(--sucesso)]/5", barra: "bg-[var(--sucesso)]", tom: "ok" as const, texto: "Tudo prescrito" },
+            parcial: { borda: "border-[var(--atencao)]/40 bg-[var(--atencao)]/5", barra: "bg-[var(--atencao)]", tom: "alerta" as const, texto: `Faltam ${qtd(falta, c.unidade_dose)}` },
+            excede: { borda: "border-[var(--erro)]/40 bg-[var(--erro)]/5", barra: "bg-[var(--erro)]", tom: "perigo" as const, texto: `Excede ${qtd(-falta, c.unidade_dose)}` },
+            vazio: { borda: "border-border bg-card", barra: "bg-muted-foreground/40", tom: "neutro" as const, texto: "Não prescrito" },
+          }[estado];
+
+          // Prévia do que "Distribuir" vai fazer.
+          const doseN = num(cfg.dose) || c.dose_padrao;
+          const porSemana = Math.max(1, Math.round(num(cfg.porSemana)) || 1);
+          const porSemanaTotal = porSemana * (cfg.frequencia === "2x" ? 2 : 1);
+          const realizado = chips.filter((x) => x.realizada && x.purchase_id === c.id).reduce((t, x) => t + num(x.dose), 0);
+          const semanasNecessarias = Math.ceil(Math.max(0, c.contratado - realizado) / (doseN * porSemanaTotal));
+          const semanasPrevia = Math.min(semanasNecessarias, Math.round(num(cfg.semanas)) || Infinity);
+          const freqTexto = FREQUENCIAS.find((f) => f.valor === cfg.frequencia)?.rotulo.toLowerCase() ?? "";
+
           return (
-            <div key={c.id} className="flex flex-wrap items-end gap-3 rounded-[16px] border bg-muted/40 px-4 py-3">
-              <div className="min-w-48 flex-1">
-                <p className="font-medium">{nomeCompra(c)}</p>
-                <p className="text-xs text-muted-foreground">
-                  {c.vendido_por === "aplicacao" ? `${qtd(c.quantidade)} aplicações` : qtd(c.quantidade, c.unidade_dose)}
-                  {c.observacao && ` · ${c.observacao}`}
-                </p>
-                <p className={`text-sm ${excede ? "font-medium text-destructive" : ""}`}>
-                  Usado: {qtd(prescrito)} / {qtd(c.contratado, c.unidade_dose)} — Restam:{" "}
-                  {qtd(Math.max(0, c.contratado - prescrito), c.unidade_dose)}
-                  {excede && " · Excede"}
-                </p>
+            <div key={c.id} className={`rounded-[16px] border px-4 py-3 ${cor.borda}`}>
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                <span className="size-2.5 rounded-full" style={{ background: corDoItem(dados.compras, c.id) }} />
+                <p className="font-semibold">{nomeCompra(c)}</p>
+                <Etiqueta tom={cor.tom}>{cor.texto}</Etiqueta>
+                <span className="ml-auto text-sm text-muted-foreground">
+                  {qtd(prescrito)} / {qtd(c.contratado, c.unidade_dose)}
+                  {c.vendido_por === "aplicacao" && ` · ${qtd(c.quantidade)} aplicações`}
+                </span>
               </div>
+              <div className="mt-2 h-1.5 rounded-full bg-muted">
+                <div className={`h-1.5 rounded-full ${cor.barra}`} style={{ width: `${pct}%` }} />
+              </div>
+              {c.observacao && <p className="mt-1 text-xs italic text-muted-foreground">{c.observacao}</p>}
+
               {pode && (
-                <>
-                  <MiniCampo rotulo={`Dose/aplicação${un ? ` (${un})` : ""}`}>
-                    <Input className="h-9 w-20" inputMode="decimal" value={cfg.dose} onChange={(e) => setCfg({ dose: e.target.value })} />
+                <div className="mt-3 flex flex-wrap items-end gap-2">
+                  <MiniCampo rotulo={`Dose${un ? ` (${un})` : ""}`}>
+                    <Input className="h-8 w-16" inputMode="decimal" value={cfg.dose} onChange={(e) => setCfg({ dose: e.target.value })} />
                   </MiniCampo>
-                  <MiniCampo rotulo="Doses na semana">
-                    <Input className="h-9 w-20" inputMode="numeric" value={cfg.porSemana} onChange={(e) => setCfg({ porSemana: e.target.value })} />
+                  <span className="pb-1.5 text-muted-foreground">×</span>
+                  <MiniCampo rotulo="Doses/semana">
+                    <Input className="h-8 w-16" inputMode="numeric" value={cfg.porSemana} onChange={(e) => setCfg({ porSemana: e.target.value })} />
                   </MiniCampo>
                   <MiniCampo rotulo="Frequência">
                     <div className="flex gap-1">
-                      <Seletor className="h-9 w-auto" value={cfg.frequencia} onChange={(e) => setCfg({ frequencia: e.target.value as Frequencia })}>
+                      <Seletor className="h-8 w-40" value={cfg.frequencia} onChange={(e) => setCfg({ frequencia: e.target.value as Frequencia })}>
                         {FREQUENCIAS.map((f) => (
                           <option key={f.valor} value={f.valor}>
                             {f.rotulo}
@@ -235,31 +257,38 @@ export function Prescricao({ plano, dados }: { plano: Plan; dados: DadosPlano })
                         ))}
                       </Seletor>
                       {cfg.frequencia === "n" && (
-                        <Input className="h-9 w-14" inputMode="numeric" value={cfg.cadaN} onChange={(e) => setCfg({ cadaN: e.target.value })} aria-label="A cada quantas semanas" />
+                        <Input className="h-8 w-12" inputMode="numeric" value={cfg.cadaN} onChange={(e) => setCfg({ cadaN: e.target.value })} aria-label="A cada quantas semanas" />
                       )}
                     </div>
                   </MiniCampo>
-                  <MiniCampo rotulo="A partir de">
-                    <div className="flex items-center gap-1">
+                  <MiniCampo rotulo="Início">
+                    <div className="flex h-8 items-center rounded-[12px] border border-input bg-card pl-2 shadow-sm">
                       <span className="text-sm text-muted-foreground">S</span>
-                      <Input className="h-9 w-14" inputMode="numeric" value={cfg.inicio} onChange={(e) => setCfg({ inicio: e.target.value })} />
+                      <input className="h-full w-10 bg-transparent px-1 text-sm outline-none" inputMode="numeric" value={cfg.inicio} onChange={(e) => setCfg({ inicio: e.target.value })} />
                     </div>
                   </MiniCampo>
-                  <MiniCampo rotulo="Por semanas">
-                    <Input className="h-9 w-20" inputMode="numeric" placeholder="até acabar" value={cfg.semanas} onChange={(e) => setCfg({ semanas: e.target.value })} />
+                  <MiniCampo rotulo="Semanas">
+                    <Input className="h-8 w-20" inputMode="numeric" placeholder="todas" value={cfg.semanas} onChange={(e) => setCfg({ semanas: e.target.value })} />
                   </MiniCampo>
-                  <Button size="sm" onClick={() => distribuirItem(c)}>
-                    <Wand2 /> Distribuir
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="text-destructive"
-                    onClick={() => mudar((cs) => cs.filter((x) => x.purchase_id !== c.id || x.realizada))}
-                  >
-                    Limpar
-                  </Button>
-                </>
+                  <div className="ml-auto flex gap-1">
+                    <Button size="sm" className="h-8" onClick={() => distribuirItem(c)}>
+                      <Wand2 /> Distribuir
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-8 text-destructive"
+                      onClick={() => mudar((cs) => cs.filter((x) => x.purchase_id !== c.id || x.realizada))}
+                    >
+                      Limpar
+                    </Button>
+                  </div>
+                  <p className="basis-full text-xs text-muted-foreground">
+                    {porSemana > 1 ? `${porSemana} doses` : "1 dose"} de {qtd(doseN, c.unidade_dose)} por semana · {freqTexto} · a
+                    partir da S{cfg.inicio || primeiraLivre}
+                    {semanasPrevia > 0 ? ` → ${semanasPrevia} semana${semanasPrevia > 1 ? "s" : ""}` : " → nada a distribuir (saldo zerado)"}
+                  </p>
+                </div>
               )}
             </div>
           );
@@ -319,10 +348,22 @@ export function Prescricao({ plano, dados }: { plano: Plan; dados: DadosPlano })
                     key={c.key}
                     draggable={pode && !c.realizada}
                     onDragStart={(e) => e.dataTransfer.setData("text/plain", c.key)}
-                    className={`flex items-center gap-1 rounded-full border px-3 py-1 text-sm ${
-                      c.realizada ? "border-transparent bg-[var(--sucesso)]/10 text-[var(--sucesso)]" : "cursor-grab bg-background"
+                    className={`flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm ${
+                      c.realizada ? "border-transparent bg-[var(--sucesso)]/10 text-[var(--sucesso)]" : "cursor-grab"
                     }`}
+                    style={
+                      c.realizada
+                        ? undefined
+                        : {
+                            borderColor: `${corDoItem(dados.compras, c.purchase_id)}55`,
+                            backgroundColor: `${corDoItem(dados.compras, c.purchase_id)}12`,
+                          }
+                    }
                   >
+                    <span
+                      className="size-2 shrink-0 rounded-full"
+                      style={{ background: c.realizada ? "var(--sucesso)" : corDoItem(dados.compras, c.purchase_id) }}
+                    />
                     <span>{cp ? nomeCompra(cp) : "…"}</span>
                     {pode && !c.realizada ? (
                       <Input
