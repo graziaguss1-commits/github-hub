@@ -1,5 +1,5 @@
 import { useMutation } from "@tanstack/react-query";
-import { Lock, Plus, Wand2, X } from "lucide-react";
+import { Lock, Plus, Split, Wand2, X } from "lucide-react";
 import { useMemo, useState, type DragEvent, type ReactNode } from "react";
 import { toast } from "sonner";
 
@@ -259,6 +259,23 @@ export function Prescricao({ plano, dados }: { plano: Plan; dados: DadosPlano })
                       {cfg.frequencia === "n" && (
                         <Input className="h-8 w-12" inputMode="numeric" value={cfg.cadaN} onChange={(e) => setCfg({ cadaN: e.target.value })} aria-label="A cada quantas semanas" />
                       )}
+                      {cfg.frequencia !== "2x" && (
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          className="h-8"
+                          title="Dividir a dose ao meio e aplicar 2x por semana"
+                          onClick={() =>
+                            setCfg({
+                              dose: String(Math.round(((num(cfg.dose) || c.dose_padrao) / 2) * 100) / 100),
+                              frequencia: "2x",
+                            })
+                          }
+                        >
+                          <Split /> Dividir 2x
+                        </Button>
+                      )}
                     </div>
                   </MiniCampo>
                   <MiniCampo rotulo="Início">
@@ -283,6 +300,13 @@ export function Prescricao({ plano, dados }: { plano: Plan; dados: DadosPlano })
                       Limpar
                     </Button>
                   </div>
+                  {cfg.frequencia === "2x" && (
+                    <p className="basis-full rounded-[10px] bg-[var(--info)]/10 px-3 py-1.5 text-xs text-[var(--info)]">
+                      2x por semana: cada aplicação recebe a dose inteira ({qtd(doseN, c.unidade_dose)}), ou seja{" "}
+                      {qtd(doseN * 2 * porSemana, c.unidade_dose)} na semana. Para dividir a dose da semana em duas, volte para
+                      "Semanal" e use <strong>Dividir 2x</strong>.
+                    </p>
+                  )}
                   <p className="basis-full text-xs text-muted-foreground">
                     {porSemana > 1 ? `${porSemana} doses` : "1 dose"} de {qtd(doseN, c.unidade_dose)} por semana · {freqTexto} · a
                     partir da S{cfg.inicio || primeiraLivre}
