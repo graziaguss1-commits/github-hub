@@ -1,5 +1,5 @@
 import { useMutation } from "@tanstack/react-query";
-import { Lock, Plus, Split, Wand2, X } from "lucide-react";
+import { Lock, Plus, Wand2, X } from "lucide-react";
 import { useMemo, useState, type DragEvent, type ReactNode } from "react";
 import { toast } from "sonner";
 
@@ -128,7 +128,9 @@ export function Prescricao({ plano, dados }: { plano: Plan; dados: DadosPlano })
     const passo =
       cfg.frequencia === "quinzenal" ? 2 : cfg.frequencia === "mensal" ? 4 : cfg.frequencia === "n" ? Math.max(1, Math.round(num(cfg.cadaN))) : 1;
     const subs = cfg.frequencia === "2x" ? [1, 2] : [1];
-    const doseCfg = num(cfg.dose) > 0 ? num(cfg.dose) : c.dose_padrao;
+    // No 2x por semana, a dose informada é a da semana e cada aplicação leva a metade.
+    const doseBase = num(cfg.dose) > 0 ? num(cfg.dose) : c.dose_padrao;
+    const doseCfg = cfg.frequencia === "2x" ? Math.round((doseBase / 2) * 100) / 100 : doseBase;
     const porSemana = Math.max(1, Math.round(num(cfg.porSemana)) || 1);
     const limiteSemanas = Math.round(num(cfg.semanas)) || Infinity;
     let semana = Math.max(primeiraLivre, Math.round(num(cfg.inicio)) || primeiraLivre);
@@ -216,7 +218,8 @@ export function Prescricao({ plano, dados }: { plano: Plan; dados: DadosPlano })
           // Prévia do que "Distribuir" vai fazer.
           const doseN = num(cfg.dose) || c.dose_padrao;
           const porSemana = Math.max(1, Math.round(num(cfg.porSemana)) || 1);
-          const porSemanaTotal = porSemana * (cfg.frequencia === "2x" ? 2 : 1);
+          const doisPorSemana = cfg.frequencia === "2x";
+          const porSemanaTotal = porSemana;
           const realizado = chips.filter((x) => x.realizada && x.purchase_id === c.id).reduce((t, x) => t + num(x.dose), 0);
           const semanasNecessarias = Math.ceil(Math.max(0, c.contratado - realizado) / (doseN * porSemanaTotal));
           const semanasPrevia = Math.min(semanasNecessarias, Math.round(num(cfg.semanas)) || Infinity);
@@ -240,7 +243,7 @@ export function Prescricao({ plano, dados }: { plano: Plan; dados: DadosPlano })
 
               {pode && (
                 <div className="mt-3 flex flex-wrap items-end gap-2">
-                  <MiniCampo rotulo={`Dose${un ? ` (${un})` : ""}`}>
+                  <MiniCampo rotulo={`${cfg.frequencia === "2x" ? "Dose na semana" : "Dose"}${un ? ` (${un})` : ""}`}>
                     <Input className="h-8 w-16" inputMode="decimal" value={cfg.dose} onChange={(e) => setCfg({ dose: e.target.value })} />
                   </MiniCampo>
                   <span className="pb-1.5 text-muted-foreground">×</span>
@@ -259,23 +262,7 @@ export function Prescricao({ plano, dados }: { plano: Plan; dados: DadosPlano })
                       {cfg.frequencia === "n" && (
                         <Input className="h-8 w-12" inputMode="numeric" value={cfg.cadaN} onChange={(e) => setCfg({ cadaN: e.target.value })} aria-label="A cada quantas semanas" />
                       )}
-                      {cfg.frequencia !== "2x" && (
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="outline"
-                          className="h-8"
-                          title="Dividir a dose ao meio e aplicar 2x por semana"
-                          onClick={() =>
-                            setCfg({
-                              dose: String(Math.round(((num(cfg.dose) || c.dose_padrao) / 2) * 100) / 100),
-                              frequencia: "2x",
-                            })
-                          }
-                        >
-                          <Split /> Dividir 2x
-                        </Button>
-                      )}
+
                     </div>
                   </MiniCampo>
                   <MiniCampo rotulo="Início">
@@ -300,15 +287,17 @@ export function Prescricao({ plano, dados }: { plano: Plan; dados: DadosPlano })
                       Limpar
                     </Button>
                   </div>
-                  {cfg.frequencia === "2x" && (
+                  {doisPorSemana && (
                     <p className="basis-full rounded-[10px] bg-[var(--info)]/10 px-3 py-1.5 text-xs text-[var(--info)]">
-                      2x por semana: cada aplicação recebe a dose inteira ({qtd(doseN, c.unidade_dose)}), ou seja{" "}
-                      {qtd(doseN * 2 * porSemana, c.unidade_dose)} na semana. Para dividir a dose da semana em duas, volte para
-                      "Semanal" e use <strong>Dividir 2x</strong>.
+                      2x por semana: {qtd(doseN, c.unidade_dose)} na semana, divididos em duas aplicações de{" "}
+                      <strong>{qtd(Math.round((doseN / 2) * 100) / 100, c.unidade_dose)}</strong>.
                     </p>
                   )}
                   <p className="basis-full text-xs text-muted-foreground">
-                    {porSemana > 1 ? `${porSemana} doses` : "1 dose"} de {qtd(doseN, c.unidade_dose)} por semana · {freqTexto} · a
+                    {doisPorSemana
+                      ? `2 aplicações de ${qtd(Math.round((doseN / 2) * 100) / 100, c.unidade_dose)} por semana`
+                      : `${porSemana > 1 ? `${porSemana} doses` : "1 dose"} de ${qtd(doseN, c.unidade_dose)} por semana`}{" "}
+                    · {freqTexto} · a
                     partir da S{cfg.inicio || primeiraLivre}
                     {semanasPrevia > 0 ? ` → ${semanasPrevia} semana${semanasPrevia > 1 ? "s" : ""}` : " → nada a distribuir (saldo zerado)"}
                   </p>
