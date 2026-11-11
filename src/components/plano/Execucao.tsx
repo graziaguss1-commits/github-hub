@@ -150,8 +150,11 @@ export function Execucao({ plano, dados }: { plano: Plan; dados: DadosPlano }) {
                       >
                         <div className="min-w-0 flex-1 space-y-1">
                           {dividida && (
-                            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                            <p className="flex items-center gap-2 font-medium">
                               {s.sub}ª aplicação
+                              <span className="rounded-full border border-[var(--info)]/40 px-2 py-0.5 text-xs font-semibold text-[var(--info)]">
+                                {s.sub}/{subs.length}
+                              </span>
                             </p>
                           )}
                           {sit === "realizada"
